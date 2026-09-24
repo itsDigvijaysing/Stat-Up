@@ -1,0 +1,301 @@
+task,category
+Rowing machine 2000 m today,STR
+Do 15 min on the rowing machine at the gym today,STR
+Kayaking at the lake on sunday morning,STR
+Go for river rafting with the office group,STR
+Do 3 rounds on the punching bag,STR
+Boxing bag training for 30 min,STR
+Join the kickboxing class this evening,STR
+Bouldering at the climbing wall today,STR
+Try the climbing wall with the team,STR
+Play kabaddi in the village ground with the local boys team,STR
+Kushti practice with cousin in the akhada,STR
+Arm wrestling round with the boys,STR
+Tug of war practice for office event,STR
+Tyre flip 5 sets outside the gym,STR
+Sledgehammer hits on the tyre 50 times,STR
+Sled push 4 rounds in the turf,STR
+Battle ropes 30 sec each set,STR
+Farmers walk with heavy dumbbells today,STR
+Do clean and jerk practice today,STR
+Snatch practice with light bar first,STR
+Bulgarian split squat 3 sets today,STR
+Sandbag carry across the ground twice,STR
+Lift the log and carry it,STR
+Chop the firewood for the kitchen at the village house,STR
+Carry firewood bundle from the backyard,STR
+Push the lawn mower whole garden,STR
+Shovel the sand pile near gate,STR
+Use wheelbarrow to move the mud,STR
+Plough work in the village farm,STR
+Harvest work with grandfather in the field for the whole morning,STR
+Zumba class at the society hall,STR
+Aerobics class in the morning batch,STR
+Dance workout 30 min at home,STR
+Crossfit wod at the box today,STR
+Do the murph workout this weekend,STR
+Obstacle race practice with the group,STR
+Sign up for the mud run and train hard for it,STR
+Cross country race practice in the woods,STR
+Race walking practice 3 km today,STR
+Weighted vest walk for 40 min,STR
+Field hockey match on saturday evening,STR
+Play handball with the college guys,STR
+Rugby practice session with the club,STR
+Paddle the boat across the pond,STR
+Wall ball throws 4 sets today,STR
+Thruster sets with the barbell today,STR
+Do 5 rounds of shadow boxing,STR
+Carry the water drum from the tanker,STR
+Hoist the luggage on the bus roof during the village trip,STR
+Practice bhangra dance for one full hour,STR
+Read about quantum gate operations,INT
+Study blockchain consensus mechanism,INT
+Learn solidity smart contract basics,INT
+Understand zero knowledge proofs,INT
+Study game physics engine maths,INT
+Learn unity scripting fundamentals,INT
+Read about shader programming,INT
+Study audio signal processing,INT
+Learn about fourier transform applications,INT
+Read the robotics kinematics chapter,INT
+Study path planning algorithms,INT
+Learn about slam techniques,INT
+Read bioinformatics sequence alignment,INT
+Study protein folding basics,INT
+Learn about genome assembly,INT
+Read the GIS spatial analysis guide,INT
+Study map projection systems,INT
+Learn about remote sensing data,INT
+Study actuarial mortality tables,INT
+Prepare for CFA level one,INT
+Read about portfolio theory,INT
+Study derivatives pricing models,INT
+Learn about options greeks,INT
+Read the structural analysis chapter,INT
+Study reinforced concrete design,INT
+Learn about soil mechanics,INT
+Read agriculture soil testing methods,INT
+Study crop rotation science,INT
+Learn about irrigation planning,INT
+Read veterinary pathology notes,INT
+Study animal nutrition requirements,INT
+Learn about vaccine cold chain,INT
+Read the epidemiology textbook,INT
+Study biostatistics sampling methods,INT
+Learn about clinical trial design,INT
+Read chess opening theory,INT
+Study endgame tablebase positions,INT
+Learn about rating calculation,INT
+Read about typography history,INT
+Study colour theory for design,INT
+Learn ux research methods,INT
+Read the behavioural economics book,INT
+Study game theory equilibrium,INT
+Learn about auction mechanisms,INT
+Read the supply chain textbook,INT
+Study inventory optimization models,INT
+Learn about queueing theory,INT
+Read about operations research,INT
+Study linear programming simplex,INT
+Learn about integer programming,INT
+Renew the club membership card,WIS
+Check the fridge warranty period,WIS
+Claim the extended warranty now,WIS
+Note the chimney service schedule,WIS
+Book the pest control visit,WIS
+Check the housing loan statement,WIS
+Prefer to close the loan early,WIS
+Compare the home loan rates,WIS
+Check the property tax due,WIS
+Pay the municipal tax online,WIS
+Get the encumbrance certificate,WIS
+Update the voter id address,WIS
+Apply for the ration card update,WIS
+Check the scholarship disbursement status,WIS
+Verify the stipend credited or not,WIS
+Track the pf withdrawal request,WIS
+Check the gratuity calculation,WIS
+Review the offer letter terms,WIS
+Read the notice period clause,WIS
+Note the last working day formalities,WIS
+Collect the relieving letter,WIS
+Check the experience letter details,WIS
+Sort the tax documents folder,WIS
+Shred the old bank papers,WIS
+Digitise the old photo albums,WIS
+Back up the phone gallery,WIS
+Free up the icloud storage,WIS
+Check the laptop storage space,WIS
+Uninstall the heavy unused software,WIS
+Note the license key somewhere safe,WIS
+Renew the antivirus subscription,WIS
+Check the printer cartridge stock,WIS
+Order the refill before it finishes,WIS
+Keep track of stationery needed,WIS
+Make an inventory of the kitchen,WIS
+Check what groceries are finishing,WIS
+Plan the festival shopping budget,WIS
+Estimate the wedding gift amount,WIS
+Note down who gave what gift,WIS
+Send the thank you list to mother,WIS
+Review the year honestly tonight,WIS
+Write the letter to future self,WIS
+List the regrets from this year,WIS
+Decide what to carry into next year,WIS
+Think about what success means now,WIS
+Question whether this goal still matters,WIS
+Pause and check my direction,WIS
+Spend an hour thinking with no phone,WIS
+Observe my thoughts without judging,WIS
+Practice detachment from the outcome,WIS
+Practice the glass blowing shaping,DEX
+Work on the leather stitching awl,DEX
+Do the bookbinding spine practice,DEX
+Practice the paper marbling technique,DEX
+Work on the linocut carving,DEX
+Do the screen printing squeegee practice,DEX
+Practice the etching needle control,DEX
+Work on the stained glass cutting,DEX
+Practice the mosaic tile placing,DEX
+Do the enamel work practice,DEX
+Practice the silversmithing hammering,DEX
+Work on the stone setting technique,DEX
+Practice the engraving on metal,DEX
+Do the blacksmith hammer control,DEX
+Practice the horse riding posture,DEX
+Work on the rein handling,DEX
+Do the falconry glove handling,DEX
+Practice the sheep shearing technique,DEX
+Work on the milking hand technique,DEX
+Practice the tractor reverse control,DEX
+Do the forklift manoeuvre practice,DEX
+Practice the crane operation control,DEX
+Work on the sewing machine speed,DEX
+Practice the overlock stitching,DEX
+Do the buttonhole practice,DEX
+Practice the saree draping neatly,DEX
+Work on the turban tying,DEX
+Practice the gift wrapping corners,DEX
+Do the ribbon bow practice,DEX
+Practice the balloon arch building,DEX
+Work on the cake sculpting,DEX
+Practice the sugar flower making,DEX
+Do the fondant smoothing practice,DEX
+Practice the bread scoring technique,DEX
+Work on the pasta hand rolling,DEX
+Practice the momo folding,DEX
+Do the samosa folding practice,DEX
+Practice the paan folding,DEX
+Work on the coconut breaking technique,DEX
+Practice the fire spinning control,DEX
+Do the unicycle balance practice,DEX
+Practice the pogo stick control,DEX
+Work on the parkour landing,DEX
+Practice the trampoline flip form,DEX
+Do the gymnastics ring hold,DEX
+Practice the pole dance grip,DEX
+Work on the aerial silk wrap,DEX
+Practice the diabolo trick,DEX
+Do the kendama catch practice,DEX
+Practice the spinning top control,DEX
+Attend the funeral and console the family,CHA
+Call uncle and give condolences,CHA
+Talk to landlord about rent hike,CHA
+Meet the landlord and ask for deposit refund,CHA
+Complain to the customer care executive politely and get my issue solved,CHA
+Attend toastmasters session and give speech,CHA
+Go as a guest on my friend podcast and talk about android,CHA
+Record podcast talk with a developer,CHA
+Find team members for the hackathon,CHA
+Talk to strangers at the conference booth,CHA
+Man the stall at the college expo,CHA
+Sit with both my friends and resolve the fight between them calmly,CHA
+Break the bad news to my parents gently,CHA
+Ask forgiveness from my grandmother,CHA
+Attend naming ceremony of cousin baby,CHA
+Visit hospital and meet the sick uncle,CHA
+Attend the farewell party of my senior,CHA
+Write a farewell note for my colleague,CHA
+Join the book club discussion tonight,CHA
+Attend the language exchange meet,CHA
+Practice english speaking with a partner,CHA
+Join the morning running group,CHA
+Talk to the priest about pooja date,CHA
+Invite pandit ji for griha pravesh,CHA
+Go with papa to meet the property dealer and talk about the plot,CHA
+Speak to the school principal about admision,CHA
+Take part in the debate competition,CHA
+Judge the coding contest for juniors,CHA
+Moderate the panel at developer summit,CHA
+Interview a candidate for our team,CHA
+Take technical round of a fresher,CHA
+Reject the candidate politely on call,CHA
+Run a retro meeting with the squad and collect everyone honest opinion,CHA
+Do a knowledge sharing session at office,CHA
+Write a handwritten letter to my grandmother,CHA
+Reply to the comments on my youtube video,CHA
+Go live on instagram and answer questions,CHA
+Answer the questions asked in my AMA,CHA
+Tell a bedtime story to my little sister before she sleeps tonight,CHA
+Play carrom with the hostel guys,CHA
+Have a long chat with an old neighbour,CHA
+Attend the housewarming of my colleague,CHA
+Greet the guests at the entrance,CHA
+Serve food to the guests at the function,CHA
+Make small talk with the people standing near me at the party,CHA
+Settle the argument with my brother calmly,CHA
+Ask a stranger for directions politely,CHA
+Volunteer at the old age home and spend the evening with them,CHA
+Teach kids at the NGO on sundey,CHA
+Collect money from friends for the gift,CHA
+Get the bone density scan,VIT
+Book the ecg test appointment,VIT
+Do the treadmill stress test,VIT
+Get the ultrasound done tomorrow,VIT
+Collect the biopsy report,VIT
+Schedule the endoscopy appointment,VIT
+Get the hearing aid checked,VIT
+Replace the contact lens solution,VIT
+Order the new orthopaedic insole,VIT
+Use the knee cap support,VIT
+Wear the wrist brace while typing,VIT
+Get the mattress firmness checked,VIT
+Replace the old pillow,VIT
+Use the cervical pillow tonight,VIT
+Try the weighted blanket,VIT
+Set the room temperature right,VIT
+Use the white noise for sleep,VIT
+Try the sleep mask tonight,VIT
+Avoid the heavy blanket in summer,VIT
+Get the snoring problem checked,VIT
+Do the sleep apnea test,VIT
+Reduce the acidity with cold milk,VIT
+Have the ajwain for gas,VIT
+Chew saunf after the meal,VIT
+Take the digestive enzyme,VIT
+Have the hing water for bloating,VIT
+Avoid the raw onion at night,VIT
+Have the pomegranate juice,VIT
+Eat the guava for fibre,VIT
+Include the bottle gourd juice,VIT
+Have the drumstick soup,VIT
+Add the curry leaves to food,VIT
+Use the cinnamon for sugar control,VIT
+Have the fenugreek water morning,VIT
+Try the barley water,VIT
+Reduce the tamarind in food,VIT
+Avoid the pickle with every meal,VIT
+Cut the papad from daily meal,VIT
+Skip the fried snacks evening,VIT
+Replace biscuits with nuts,VIT
+Stop the midnight ice cream,VIT
+Avoid the energy drinks fully,VIT
+Quit the vaping habit,VIT
+Reduce the screen before nap,VIT
+Take the power nap correctly,VIT
+Avoid the long afternoon sleep,VIT
+Fix the irregular meal timing,VIT
+Do not fast without preparation,VIT
+Break the fast with fruit,VIT
+Rehydrate after the long fast,VIT
