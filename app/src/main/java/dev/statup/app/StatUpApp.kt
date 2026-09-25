@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
@@ -63,6 +64,16 @@ class StatUpApp : Application() {
         appScope.launch { StatMappingSeeder.seedIfEmpty(database, statMappingDao) }
         appScope.launch { userPreferences.loadSecretsIfNeeded() }
 
+        // The guided tour is for a genuinely new install. `firstInstallTime` and
+        // `lastUpdateTime` are equal only until the app is first updated, so any diverging
+        // pair means this device has had the app before and should not be taught it again -
+        // including someone who abandoned the tour and later took an update.
+        appScope.launch {
+            if (!userPreferences.tutorialComplete.first() && !isFreshInstall()) {
+                userPreferences.setTutorialComplete(true)
+            }
+        }
+
         // Starter missions + rewards, once per install, so Tasks and Rewards never open empty.
         appScope.launch {
             StarterContentSeeder.seedIfNeeded(database, get<MissionDao>(), get<RewardDao>(), userPreferences)
@@ -80,6 +91,11 @@ class StatUpApp : Application() {
         // calls onUpdate on install/boot; this covers app-open after background data changes.
         appScope.launch { get<StatsWidgetUpdater>().refresh() }
     }
+
+    private fun isFreshInstall(): Boolean = runCatching {
+        val info = packageManager.getPackageInfo(packageName, 0)
+        info.firstInstallTime == info.lastUpdateTime
+    }.getOrDefault(true)
 
     private fun scheduleWorkers() {
         DecayWorker.schedule(this)

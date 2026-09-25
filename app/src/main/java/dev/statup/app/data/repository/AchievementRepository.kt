@@ -22,6 +22,8 @@ const val ACHIEVEMENT_REWARD_PREFIX = "Achievement reward: "
 class AchievementRepository(
     private val database: AppDatabase,
     private val titleDao: TitleDao,
+    /** Fires the unlock celebration. Optional so tests can leave it out. */
+    private val unlockNotifier: dev.statup.app.rpg.AchievementUnlockNotifier? = null,
     /**
      * Optional points-award hook. Provided lazily as a suspend lambda to avoid a circular
      * Koin dependency (AchievementTracker → AchievementRepository → PointsRepository →
@@ -104,6 +106,11 @@ class AchievementRepository(
         }
         if (unlockedNow > 0) {
             pointsAwarder(achievementId, unlockedNow)
+            // Read back AFTER the award so the celebration shows the unlocked row, not the
+            // pre-unlock snapshot taken inside the transaction.
+            titleDao.getById(achievementId)?.let {
+                unlockNotifier?.notify(it.toAchievement(Achievements.getById(achievementId)))
+            }
         }
     }
 

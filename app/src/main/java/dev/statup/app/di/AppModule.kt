@@ -141,6 +141,7 @@ val appModule = module {
         AchievementRepository(
             database = get(),
             titleDao = get(),
+            unlockNotifier = get(),
             pointsAwarder = { achievementId, points ->
                 get<PointsRepository>().addPoints(
                     points = points,
@@ -166,6 +167,7 @@ val appModule = module {
             widgetUpdater = get()
         )
     }
+    single { dev.statup.app.rpg.AchievementUnlockNotifier() }
     single { AchievementTracker(get(), get(), get()) }
 
     // Offline task -> stat classifier. The 96 KB blob is read from assets on first use and
@@ -193,12 +195,12 @@ val appModule = module {
         )
     }
     single { StatUpgradeRunner(get<UserPreferences>(), get(), get()) }
-    single { dev.statup.app.ui.screen.tutorial.TutorialCoordinator(get(), get()) }
+    single { dev.statup.app.ui.screen.tutorial.TutorialCoordinator(get<UserPreferences>(), get()) }
 
     // ViewModels
     viewModel { StatusViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { RewardsViewModel(get(), get(), get(), get()) }
-    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { TasksViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel {
         HistoryViewModel(

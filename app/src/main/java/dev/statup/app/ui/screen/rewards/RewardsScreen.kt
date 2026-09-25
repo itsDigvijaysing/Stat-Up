@@ -1,6 +1,9 @@
 package dev.statup.app.ui.screen.rewards
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -50,11 +54,21 @@ fun RewardsScreen(
     var pendingEdit by remember { mutableStateOf<Reward?>(null) }
     val hapticTick = rememberHapticTick()
 
+    val confirmShowing = pendingRedeem != null || pendingDelete != null
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                // No bottom padding: the Scaffold already reserves the bar's height, and
+                // padding on top of that leaves a bare strip between the last card and the
+                // bar's bright top edge, which reads as a drawn black line. Letting the list
+                // run to the bar also gives the glass bar something to actually blur.
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp)
+                // Matches the achievement celebration exactly: the CONTENT blurs, not the
+                // overlay. Haze cannot do this here because the overlay is nested inside the
+                // haze source, which is why this sheet stayed sharp while the celebration did not.
+                .blur(if (confirmShowing) GlassTokens.ModalBackdropBlur else 0.dp)
         ) {
             // Header
             Row(
@@ -130,7 +144,10 @@ fun RewardsScreen(
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 100.dp)
+                    // No bottom padding: the Scaffold already reserves the bar's height, so any
+                    // padding on top of it leaves a strip of bare background between the last
+                    // card and the bar's bright top edge - which reads as a drawn black line.
+                    contentPadding = PaddingValues(bottom = 0.dp)
                 ) {
                     items(uiState.rewards, key = { it.id }) { reward ->
                         RewardCard(
@@ -368,26 +385,42 @@ private fun ConfirmActionDialog(
     onDismiss: () -> Unit,
     titleColor: Color = TextPrimary
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+    // An in-tree overlay, NOT a Dialog. A Dialog is its own window, so Haze cannot sample the
+    // app behind it and the backdrop can only be darkened, never blurred. Rendered here it
+    // sits inside the NavHost - the haze source - so the rewards behind genuinely blur, the
+    // same way GlassCard already does.
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundBase.copy(alpha = 0.22f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss
+            )
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundBase.copy(alpha = 0.92f))
                 .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            GlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                elevated = true
+            // Deliberately NOT a GlassCard: glass is translucent, so over a real screen the
+            // list behind bleeds straight through the card and collides with its own text.
+            // A confirmation has to be solid to be readable.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(GlassTokens.CardRadiusElevated))
+                    .background(BackgroundSurface)
+                    .border(
+                        1.dp,
+                        GlassBorderElevated,
+                        RoundedCornerShape(GlassTokens.CardRadiusElevated)
+                    )
+                    .padding(20.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
+                run {
                     Text(
                         text = title,
                         color = titleColor,
@@ -445,6 +478,9 @@ private fun CreateRewardDialog(
     // Effective cost: custom field overrides preset when filled with a positive int.
     val effectiveCost = customCost.toIntOrNull()?.takeIf { it > 0 } ?: cost.toIntOrNull() ?: 10
 
+    // Stays a plain Dialog. Only the achievement celebration and the redeem confirmation
+    // blur their backdrop; this is an ordinary form and should behave like every other
+    // dialog in the app.
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)

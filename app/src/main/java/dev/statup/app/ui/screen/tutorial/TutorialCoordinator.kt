@@ -1,6 +1,5 @@
 package dev.statup.app.ui.screen.tutorial
 
-import dev.statup.app.data.local.datastore.UserPreferences
 import dev.statup.app.data.local.db.dao.MissionDao
 import dev.statup.app.data.local.db.entity.MissionEntity
 import dev.statup.app.domain.model.PlayerStats
@@ -23,7 +22,8 @@ import kotlinx.coroutines.flow.first
 enum class TutorialStep(val targetRoute: String?) {
     INTRO(null),
     COMPLETE_TASK(Routes.TASKS),
-    SEE_ACHIEVEMENT(Routes.ACHIEVEMENTS),
+    // No target tab: the unlock popup comes to the user, so there is nowhere to send them.
+    SEE_ACHIEVEMENT(null),
     REDEEM_REWARD(Routes.REWARDS)
 }
 
@@ -42,8 +42,15 @@ enum class TutorialStep(val targetRoute: String?) {
  * Every step also completes on the *generic* action (any mission, any redemption), so deleting
  * the sample content cannot dead-end the flow.
  */
+/** The preference slice the tour needs. Implemented by `UserPreferences`. */
+interface TutorialStore {
+    suspend fun getTutorialStep(): String?
+    suspend fun setTutorialStep(step: String?)
+    suspend fun setTutorialComplete(complete: Boolean)
+}
+
 class TutorialCoordinator(
-    private val userPreferences: UserPreferences,
+    private val store: TutorialStore,
     private val missionDao: MissionDao
 ) {
     private val _step = MutableStateFlow<TutorialStep?>(null)
@@ -63,7 +70,7 @@ class TutorialCoordinator(
         // Resume where the user actually was. The tour spans several real screens, so the
         // process can easily die mid-flow; replaying the intro would ask them to redo work
         // they have already been paid for and would break the 5 + 45 = 50 arithmetic.
-        val saved = userPreferences.getTutorialStep()
+        val saved = store.getTutorialStep()
             ?.let { name -> TutorialStep.entries.firstOrNull { it.name == name } }
         if (saved != null) {
             _step.value = saved
@@ -108,13 +115,13 @@ class TutorialCoordinator(
     suspend fun finish() {
         existingTutorialMission()?.let { missionDao.delete(it) }
         _step.value = null
-        userPreferences.setTutorialStep(null)
-        userPreferences.setTutorialComplete(true)
+        store.setTutorialStep(null)
+        store.setTutorialComplete(true)
     }
 
     private suspend fun moveTo(step: TutorialStep) {
         _step.value = step
-        userPreferences.setTutorialStep(step.name)
+        store.setTutorialStep(step.name)
     }
 
     private suspend fun existingTutorialMission(): MissionEntity? =

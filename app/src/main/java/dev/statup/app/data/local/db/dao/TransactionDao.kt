@@ -103,6 +103,10 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE source = :source AND createdAt >= :startTime AND createdAt < :endTime")
     fun countBySourceInRange(source: String, startTime: Long, endTime: Long): Flow<Int>
 
+    /** Debug-only: removes the fabricated demo history by its description marker. */
+    @Query("DELETE FROM transactions WHERE description LIKE :prefix")
+    suspend fun deleteByDescriptionPrefix(prefix: String)
+
     @Query("DELETE FROM transactions")
     suspend fun deleteAll()
 }

@@ -25,9 +25,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -37,6 +41,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.statup.app.data.local.datastore.UserPreferences
 import dev.statup.app.ui.components.AmbientBackground
+import dev.statup.app.ui.components.rpg.AchievementUnlockedDialog
 import dev.statup.app.ui.components.LocalHapticsEnabled
 import dev.statup.app.ui.components.glass.BottomNavItem
 import dev.statup.app.ui.components.glass.GlassBottomBar
@@ -58,10 +63,14 @@ import dev.statup.app.ui.screen.settings.SettingsScreen
 import dev.statup.app.ui.screen.stats.StatsScreen
 import dev.statup.app.ui.screen.status.StatusScreen
 import dev.statup.app.ui.screen.tasks.TasksScreen
+import dev.statup.app.domain.model.Achievement
+import dev.statup.app.rpg.AchievementUnlockNotifier
 import dev.statup.app.rpg.StatUpgradeRunner
 import dev.statup.app.rpg.StatUpgradeState
 import dev.statup.app.ui.theme.AccentPrimary
+import androidx.compose.foundation.layout.navigationBarsPadding
 import dev.statup.app.ui.theme.BackgroundBase
+import dev.statup.app.ui.theme.GlassTokens
 import dev.statup.app.ui.theme.Inter
 import dev.statup.app.ui.theme.TextPrimary
 import dev.statup.app.ui.theme.TextSecondary
@@ -117,6 +126,7 @@ fun AppNavigation(
     val tutorialCoordinator = koinInject<TutorialCoordinator>()
     val tutorialStep by tutorialCoordinator.step.collectAsStateWithLifecycle()
     val tutorialScope = rememberCoroutineScope()
+
     LaunchedEffect(onboarded, tutorialDone) {
         if (onboarded == true && tutorialDone == false) tutorialCoordinator.start()
     }
@@ -225,6 +235,18 @@ private fun MainShell(
     val imeVisible = WindowInsets.isImeVisible
     val showBottomBar = currentRoute in bottomNavRoutes && !imeVisible
 
+// Unlocks are celebrated wherever the user happens to be, so the listener lives at the
+    // shell rather than on any one screen - a Todoist sync or the midnight decay tick can
+    // unlock something with no relevant screen open. It must render INSIDE the
+    // LocalHazeState provider, or hazeEffectOrFallback finds no state and silently skips
+    // the blur, leaving only a dim.
+    val unlockNotifier = koinInject<AchievementUnlockNotifier>()
+    var pendingUnlock by remember { mutableStateOf<Achievement?>(null) }
+    LaunchedEffect(unlockNotifier) {
+        unlockNotifier.events.collect { pendingUnlock = it }
+    }
+
+
     // Single HazeState shared across the whole shell - content is the "source", glass
     // primitives (cards, bottom bar) are "effects" that sample the source at blur time.
     val hazeState = rememberHazeState()
@@ -269,7 +291,10 @@ private fun MainShell(
                     // the bottom-bar's height, so they stack the full inset on top of it -
                     // a permanent gap the size of the bottom bar between content and the IME.
                     .consumeWindowInsets(paddingValues)
-                    .hazeSourceOrFallback(),
+                    .hazeSourceOrFallback()
+                    // Blur everything behind a modal celebration. Applied to the content, not
+                    // the overlay, so it is identical to the redeem sheet's treatment.
+                    .blur(if (pendingUnlock != null) GlassTokens.ModalBackdropBlur else 0.dp),
                 // Subtle fade-through on route changes for a more fluid feel.
                 enterTransition = { fadeIn(tween(220)) + slideInHorizontally(tween(220)) { it / 16 } },
                 exitTransition = { fadeOut(tween(160)) },
@@ -308,27 +333,49 @@ private fun MainShell(
                 }
             }
 
-            tutorialStep?.takeIf { it != TutorialStep.INTRO }?.let { step ->
-                TutorialOverlay(
-                    step = step,
-                    isOnTargetTab = currentRoute == step.targetRoute,
-                    currentRoute = currentRoute,
-                    hasBottomBar = showBottomBar,
-                    onAcknowledge = {
-                        // Achievements is a hidden route with no bottom bar, so finishing that
-                        // step while still on it would point at a tab the user cannot see.
-                        // Returning to the shell is the natural end of "done looking at this" -
-                        // it is a back, not a teleport between tabs.
-                        if (currentRoute !in bottomNavRoutes) navController.popBackStack()
-                        onTutorialAcknowledge()
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = paddingValues.calculateBottomPadding() + 12.dp)
-                )
-            }
             }  // Box
         }
+
+        pendingUnlock?.let { unlocked ->
+            AchievementUnlockedDialog(
+                achievement = unlocked,
+                onDismiss = {
+                    pendingUnlock = null
+                    // Dismissing the celebration IS the tutorial's achievement step; it is a
+                    // no-op at every other time.
+                    onTutorialAcknowledge()
+                }
+            )
+        }
+
+        // Drawn LAST, after the celebration overlay, so the instructions stay sharp and fully
+        // readable on top of the blur rather than being blurred with the rest of the screen.
+        // (It also has to sit outside the Scaffold: inside its content slot the bottom bar -
+        // a sibling drawn afterwards - painted straight over it.)
+        LaunchedEffect(tutorialStep, pendingUnlock) {
+            if (tutorialStep == TutorialStep.SEE_ACHIEVEMENT && pendingUnlock == null) {
+                // Give the unlock a moment to arrive; if nothing shows, move on by itself
+                // rather than stranding the tour on a step with no action left in it.
+                kotlinx.coroutines.delay(1500)
+                if (pendingUnlock == null) onTutorialAcknowledge()
+            }
+        }
+
+        tutorialStep?.takeIf { it != TutorialStep.INTRO }?.let { step ->
+            TutorialOverlay(
+                step = step,
+                isOnTargetTab = currentRoute == step.targetRoute,
+                currentRoute = currentRoute,
+                hasBottomBar = showBottomBar,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    // Tight to the bar: the block sits below the centred popup card, and
+                    // every dp of clearance above it is one less chance of overlap.
+                    .padding(bottom = if (showBottomBar) GlassTokens.BottomBarHeight else 8.dp)
+            )
+        }
+
     }
     }  // CompositionLocalProvider
 }

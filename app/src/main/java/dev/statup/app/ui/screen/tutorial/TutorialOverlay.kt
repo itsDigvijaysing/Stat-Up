@@ -4,7 +4,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -22,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -30,8 +28,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import dev.statup.app.domain.model.PlayerStats
-import dev.statup.app.ui.navigation.Routes
 import dev.statup.app.ui.components.glass.GlassButton
+import dev.statup.app.ui.navigation.Routes
 import dev.statup.app.ui.theme.*
 
 /**
@@ -122,12 +120,15 @@ fun TutorialIntroDialog(onStart: () -> Unit, onSkip: () -> Unit) {
 }
 
 /**
- * The coach-mark strip for the guided first run. Kept slim and pinned above the bottom bar so
- * it never covers the thing it is describing : the achievement step in particular has to leave
- * the freshly unlocked row visible.
+ * The coach-mark strip for the guided first run. Kept slim and pinned above the bottom bar,
+ * and it fades out on a cycle so it never permanently covers the thing it is pointing at.
  *
- * It does not navigate; when the step lives on another tab it names the tab and the bottom bar
- * pulses it, so the user learns the layout by moving through it themselves.
+ * It does not navigate. When the step lives on another tab it names that tab and the bottom
+ * bar pulses it, so the user learns the layout by moving through it themselves.
+ *
+ * The achievement step has no target tab at all - the unlock popup comes to the user - so
+ * this strip is its fallback: if the popup never fires (the achievement was already unlocked
+ * on an earlier run) the step is still completable from here.
  */
 @Composable
 fun TutorialOverlay(
@@ -137,7 +138,6 @@ fun TutorialOverlay(
     currentRoute: String,
     /** False on hidden detail screens, where there is no tab to point at. */
     hasBottomBar: Boolean,
-    onAcknowledge: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(16.dp)
@@ -149,38 +149,10 @@ fun TutorialOverlay(
         label = "markBorder"
     )
 
-    // The strip has to sit over the content to be read, which means it can cover the very
-    // thing it is pointing at (the Achieve card, for one). Fading almost out on a slow cycle
-    // keeps the target visible without moving the instructions somewhere the eye won't go.
-    // It is never clickable, so taps reach whatever is underneath even while it is opaque :
-    // except on the acknowledge step, where the button needs to stay solid.
-    val needsButton = isOnTargetTab && step == TutorialStep.SEE_ACHIEVEMENT
-    // Keyframes, not a linear reverse: a straight fade spends most of its time half-visible,
-    // which leaves the instructions and the card underneath overlapping into mush. This holds
-    // fully readable for ~2.6s, clears out quickly, stays fully out of the way for ~1.4s, then
-    // returns : so both states are clean and neither is ambiguous.
-    val cycleAlpha by pulse.animateFloat(
-        initialValue = 1f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = 5000
-                1f at 0 using LinearEasing
-                1f at 2600 using LinearEasing
-                0f at 3100 using LinearEasing
-                0f at 4500 using LinearEasing
-                1f at 5000
-            },
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "markFade"
-    )
-    val alpha = if (needsButton) 1f else cycleAlpha
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .graphicsLayer { this.alpha = alpha }
             .padding(horizontal = 16.dp)
             .clip(shape)
             .background(BackgroundSurface.copy(alpha = 0.97f))
@@ -197,7 +169,7 @@ fun TutorialOverlay(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = if (isOnTargetTab) step.title else "Open ${step.tabName}",
+            text = if (isOnTargetTab || step.targetRoute == null) step.title else "Open ${step.tabName}",
             color = TextPrimary,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
@@ -206,7 +178,7 @@ fun TutorialOverlay(
         Spacer(modifier = Modifier.height(3.dp))
         Text(
             text = when {
-                isOnTargetTab -> step.body
+                isOnTargetTab || step.targetRoute == null -> step.body
                 !hasBottomBar -> "Go back first, then ${step.navHintFrom(currentRoute).replaceFirstChar { it.lowercase() }}"
                 else -> step.navHintFrom(currentRoute)
             },
@@ -216,14 +188,6 @@ fun TutorialOverlay(
             lineHeight = 18.sp
         )
 
-        if (isOnTargetTab && step == TutorialStep.SEE_ACHIEVEMENT) {
-            Spacer(modifier = Modifier.height(12.dp))
-            GlassButton(
-                text = "Got it : now spend them",
-                onClick = onAcknowledge,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
     }
 }
 
@@ -231,23 +195,19 @@ private val TutorialStep.tabName: String
     get() = when (this) {
         TutorialStep.INTRO -> ""
         TutorialStep.COMPLETE_TASK -> "Tasks"
-        TutorialStep.SEE_ACHIEVEMENT -> "Achievements"
+        TutorialStep.SEE_ACHIEVEMENT -> ""
         TutorialStep.REDEEM_REWARD -> "Rewards"
     }
 
 /**
- * How to actually get there. Achievements has no tab of its own : it hangs off Status : so it
+ * How to actually get there. Achievements has no tab of its own (it hangs off Status), so it
  * needs the extra hop spelled out rather than pointing at a tab that does not exist.
  */
 private fun TutorialStep.navHintFrom(currentRoute: String): String = when (this) {
     TutorialStep.INTRO -> ""
     TutorialStep.COMPLETE_TASK -> "Tap the glowing Tasks tab below."
     // Achievements hangs off Status, so the hint drops the first hop once it is made.
-    TutorialStep.SEE_ACHIEVEMENT -> if (currentRoute == Routes.STATUS) {
-        "Tap the 🏆 Achieve card above."
-    } else {
-        "Tap the glowing Status tab below, then the 🏆 Achieve card."
-    }
+    TutorialStep.SEE_ACHIEVEMENT -> ""
     TutorialStep.REDEEM_REWARD -> "Tap the glowing Rewards tab below."
 }
 
@@ -267,8 +227,8 @@ private val TutorialStep.body: String
                 "${TutorialCoordinator.TUTORIAL_TASK_POINTS} points, and every " +
                 "${PlayerStats.POINTS_PER_STAT} points in a stat raises it by one."
         TutorialStep.SEE_ACHIEVEMENT ->
-            "First Step is glowing at the top : it paid out 45 more points. Achievements " +
-                "unlock on their own, and most pay you back."
+            "That popup was an achievement unlocking - it paid 45 points on top of the task. " +
+                "They unlock on their own as you play, and most pay you back."
         TutorialStep.REDEEM_REWARD ->
             "You have 50 points : exactly what \"${TutorialCoordinator.TUTORIAL_REWARD_NAME}\" " +
                 "costs. Tap Redeem on it."

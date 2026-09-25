@@ -1113,10 +1113,10 @@ private fun TaskCategoriesCard(
                         Text(
                             text = if (state.categorised > 0) {
                                 "${state.categorised} of ${state.scanned} categorised. The rest " +
-                                    "were too unclear to guess - set those by hand."
+                                    "were too unclear to guess - please set them yourself."
                             } else {
                                 "Couldn't confidently categorise any of the ${state.scanned} " +
-                                    "remaining tasks. Set those by hand."
+                                    "remaining tasks. Please set them yourself."
                             },
                             color = PointsGold,
                             fontSize = 12.sp,

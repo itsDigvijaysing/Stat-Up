@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import dev.statup.app.quotes.DailyQuoteStore
 import dev.statup.app.rpg.DecayDayStore
 import dev.statup.app.rpg.StatUpgradeStore
+import dev.statup.app.ui.screen.tutorial.TutorialStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,7 +24,7 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "us
  * Implements [DailyQuoteStore] - the narrow slice QuoteRepository needs (source setting +
  * day-keyed quote cache) - so the repository stays unit-testable without a Context.
  */
-class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayStore, StatUpgradeStore {
+class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayStore, StatUpgradeStore, TutorialStore {
 
     private val secretStorage = SecretStorage(context)
 
@@ -169,9 +170,9 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
         context.dataStore.edit { it[Keys.ONBOARDING_COMPLETE] = complete }
     }
 
-    suspend fun getTutorialStep(): String? = context.dataStore.data.first()[Keys.TUTORIAL_STEP]
+    override suspend fun getTutorialStep(): String? = context.dataStore.data.first()[Keys.TUTORIAL_STEP]
 
-    suspend fun setTutorialStep(step: String?) {
+    override suspend fun setTutorialStep(step: String?) {
         context.dataStore.edit {
             if (step == null) it.remove(Keys.TUTORIAL_STEP) else it[Keys.TUTORIAL_STEP] = step
         }

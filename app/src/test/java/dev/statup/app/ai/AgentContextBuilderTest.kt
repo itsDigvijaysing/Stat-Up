@@ -65,6 +65,7 @@ class AgentContextBuilderTest {
         override fun getByDateRange(startTime: Long, endTime: Long): Flow<List<TransactionEntity>> = error("unused")
         override suspend fun getByExternalId(externalId: String): TransactionEntity? = error("unused")
         override suspend fun getActiveEarnDays(): List<String> = error("unused")
+        override suspend fun deleteByDescriptionPrefix(prefix: String) = error("unused")
         override suspend fun getLifetimePointsForStat(statType: String): Int = error("unused")
         override suspend fun getUncategorisedEarns(): List<TransactionEntity> = error("unused")
         override suspend fun assignStatTypeIfMissing(id: Long, statType: String): Int = error("unused")

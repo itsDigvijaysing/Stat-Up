@@ -85,7 +85,11 @@ fun TasksScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                // No bottom padding: the Scaffold already reserves the bar's height, and
+                // padding on top of that leaves a bare strip between the last card and the
+                // bar's bright top edge, which reads as a drawn black line. Letting the list
+                // run to the bar also gives the glass bar something to actually blur.
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp)
         ) {
             // Header
             Row(
@@ -178,7 +182,10 @@ private fun TasksList(
     ) {
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(bottom = 100.dp),
+            // No bottom padding: the Scaffold already reserves the bar's height, so any padding
+            // on top of it leaves a strip of bare background between the last card and the
+            // bar's bright top edge - which reads as a drawn black line.
+            contentPadding = PaddingValues(bottom = 0.dp),
             modifier = Modifier.fillMaxSize()
         ) {
             // 1. Active missions first - the primary surface

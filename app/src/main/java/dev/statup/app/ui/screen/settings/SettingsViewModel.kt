@@ -31,7 +31,9 @@ class SettingsViewModel(
     private val pointsRepository: PointsRepository,
     private val categoryBackfill: CategoryBackfill,
     private val missionDao: MissionDao,
-    private val rewardDao: RewardDao
+    private val rewardDao: RewardDao,
+    private val transactionDao: dev.statup.app.data.local.db.dao.TransactionDao,
+    private val statRecomputer: dev.statup.app.rpg.StatRecomputer
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -189,6 +191,26 @@ class SettingsViewModel(
 
     fun dismissBackfillResult() {
         _uiState.update { it.copy(backfill = BackfillUiState.Idle) }
+    }
+
+    /**
+     * Fabricates 200 days of history at 4 tasks a day, then lets the real recomputer derive
+     * stats, Work Days and rank from it - so the late-game screens can be inspected without
+     * the numbers being hand-faked.
+     *
+     * Intentionally has **no caller**: see [dev.statup.app.data.local.db.DemoHistorySeeder]
+     * for why it is not exposed in the UI and how to drive it during development.
+     */
+    @Suppress("unused")
+    fun seedDemoHistory(clearFirst: Boolean) {
+        viewModelScope.launch {
+            if (clearFirst) {
+                dev.statup.app.data.local.db.DemoHistorySeeder.clear(database, transactionDao)
+            } else {
+                dev.statup.app.data.local.db.DemoHistorySeeder.seed(database, transactionDao)
+            }
+            statRecomputer.recompute()
+        }
     }
 
     fun fullReset() {
