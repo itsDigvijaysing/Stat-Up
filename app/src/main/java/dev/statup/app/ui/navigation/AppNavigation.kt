@@ -34,6 +34,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -276,6 +278,11 @@ private fun MainShell(
     // primitives (cards, bottom bar) are "effects" that sample the source at blur time.
     val hazeState = rememberHazeState()
 
+    // How much bottom space the tutorial coach-mark occupies, so the celebration popup can stay
+    // clear of it. Measured from the strip itself rather than hard-coded.
+    val density = LocalDensity.current
+    var coachMarkHeight by remember { mutableStateOf(0.dp) }
+
     CompositionLocalProvider(LocalHazeState provides hazeState) {
     Box(modifier = Modifier.fillMaxSize()) {
         AmbientBackground()
@@ -369,7 +376,11 @@ private fun MainShell(
                     // Dismissing the celebration IS the tutorial's achievement step; it is a
                     // no-op at every other time.
                     onTutorialAcknowledge()
-                }
+                },
+                // Measured, not guessed: the strip's height depends on how long the step's copy
+                // wraps, so a constant here would silently stop clearing it the next time the
+                // wording changes.
+                bottomReserved = coachMarkHeight
             )
         }
 
@@ -386,6 +397,10 @@ private fun MainShell(
             }
         }
 
+        // The strip is anchored to the bottom and drawn last, so it used to sit on top of the unlock
+        // popup's dismiss button: the user could see "Nice!" but not tap it, and that tap is what
+        // advances the achievement step, so the tour stuck there. It stays visible - step two is
+        // where the tour explains the 45 points - and the popup reserves room for it instead.
         tutorialStep?.takeIf { it != TutorialStep.INTRO }?.let { step ->
             TutorialOverlay(
                 step = step,
@@ -399,6 +414,10 @@ private fun MainShell(
                     // Tight to the bar: the block sits below the centred popup card, and
                     // every dp of clearance above it is one less chance of overlap.
                     .padding(bottom = if (showBottomBar) GlassTokens.BottomBarHeight else 8.dp)
+                    .onGloballyPositioned {
+                        coachMarkHeight = with(density) { it.size.height.toDp() } +
+                            if (showBottomBar) GlassTokens.BottomBarHeight else 8.dp
+                    }
             )
         }
 

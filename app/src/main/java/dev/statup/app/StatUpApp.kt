@@ -60,7 +60,16 @@ class StatUpApp : Application() {
         // (`by inject()` would defer construction until first access.)
         get<Notifier>()
 
-        appScope.launch { achievementRepository.initializeAchievements() }
+        // The two the first-run gate depends on. Held as Jobs so the gate can join them: the
+        // tutorial pays a mission and then waits on the `first_task` achievement, so opening the gate
+        // before the stats row or the achievement rows exist would let a fast user start a tour whose
+        // arithmetic cannot complete. Unrelated init stays fire-and-forget below.
+        val achievementsReady = appScope.launch { achievementRepository.initializeAchievements() }
+        val statsReady = appScope.launch {
+            playerRepository.initializeStats()
+            get<StatUpgradeRunner>().runIfNeeded(isFreshInstall = isFreshInstall())
+        }
+
         appScope.launch { StatMappingSeeder.seedIfEmpty(database, statMappingDao) }
         appScope.launch { userPreferences.loadSecretsIfNeeded() }
 
@@ -73,22 +82,17 @@ class StatUpApp : Application() {
         // and empty at the same time.
         appScope.launch {
             try {
+                // Everything the first screen can touch must exist before the gate opens.
+                statsReady.join()
+                achievementsReady.join()
                 userPreferences.resolveFirstRunFlags(isFreshInstall())
                 StarterContentSeeder.seedIfNeeded(database, get<MissionDao>(), get<RewardDao>(), userPreferences)
             } finally {
-                // The gate opens even if seeding failed. The UI blocks on it, so leaving it shut
-                // would strand the user on a blank frame - empty Tasks and Rewards tabs are a far
-                // better failure than no app at all.
+                // The gate opens even if something above failed. The UI blocks on it, so leaving it
+                // shut would strand the user on a blank frame, and a failed seed is self-healing -
+                // its flag is only written on success, so the next launch simply retries.
                 userPreferences.markFirstRunResolved()
             }
-        }
-
-        // One-time upgrade for pre-rebalance installs: categorise uncategorised history, then
-        // rebuild every stat on the new curve. Must run AFTER initializeStats() has guaranteed
-        // the singleton row exists, so it is chained onto that launch rather than racing it.
-        appScope.launch {
-            playerRepository.initializeStats()
-            get<StatUpgradeRunner>().runIfNeeded(isFreshInstall = isFreshInstall())
         }
 
         // Refresh any installed home-screen widget with the current DB state. The system also

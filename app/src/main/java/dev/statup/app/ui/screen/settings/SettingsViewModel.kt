@@ -213,8 +213,20 @@ class SettingsViewModel(
         }
     }
 
+    /**
+     * Wipes everything and re-seeds a fresh start.
+     *
+     * **Runs on [Dispatchers.IO].** `clearAllTables()` is a *blocking* call, and `viewModelScope`
+     * is `Main.immediate`, so Room's main-thread assertion turned every Full Reset into an instant
+     * crash - the reset never happened and the app died on the spot.
+     *
+     * The `finally` is equally load-bearing: `clearAll()` wipes the first-run gate that
+     * `AppNavigation` blocks on, and that gate is otherwise only reopened at process start, so
+     * failing between the two would leave the UI on a blank frame until a force-quit.
+     */
     fun fullReset() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
             // Clear all database tables
             database.clearAllTables()
 
@@ -231,10 +243,13 @@ class SettingsViewModel(
             // clearAll() already dropped the "seeded" flag, but re-seeding here means the
             // tabs aren't empty until the next process start.
             StarterContentSeeder.seed(database, missionDao, rewardDao)
-            // Re-open the first-run gate in this process. clearAll() wiped it, and the resolver only
-            // runs at app start, so without this the UI would sit on a blank frame until the user
-            // force-quit. Also marks the tour done and stamps the stat curve - see markResetComplete.
-            userPreferences.markResetComplete(dev.statup.app.rpg.StatRecomputer.CURVE_VERSION)
+            } finally {
+                // Re-open the first-run gate in this process, whatever happened above. clearAll()
+                // wiped it and the resolver only runs at app start, so skipping this would leave the
+                // UI on a blank frame until a force-quit. Also marks the tour done and stamps the
+                // stat curve - see markResetComplete.
+                userPreferences.markResetComplete(dev.statup.app.rpg.StatRecomputer.CURVE_VERSION)
+            }
         }
     }
 }

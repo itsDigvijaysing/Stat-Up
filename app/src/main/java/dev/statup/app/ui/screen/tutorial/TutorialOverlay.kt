@@ -252,10 +252,11 @@ private val TutorialStep.body: String
             "Tap the \"${TutorialCoordinator.TUTORIAL_TASK_NAME}\" card. It pays " +
                 "${TutorialCoordinator.TUTORIAL_TASK_POINTS} points, and every " +
                 "${PlayerStats.POINTS_PER_STAT} points in a stat raises it by one."
+        // Deliberately short: this step is the one that shares the screen with the unlock popup, so
+        // every extra line is more of the celebration covered up.
         TutorialStep.SEE_ACHIEVEMENT ->
-            "That popup was an achievement unlocking - it paid " +
-                "${TutorialCoordinator.FIRST_TASK_REWARD} points on top of the task. " +
-                "They unlock on their own as you play, and most pay you back."
+            "An achievement just paid you ${TutorialCoordinator.FIRST_TASK_REWARD} points on top " +
+                "of the task. They unlock as you play, and most pay you back."
         TutorialStep.REDEEM_REWARD ->
             "You have ${TutorialCoordinator.TUTORIAL_TASK_POINTS + TutorialCoordinator.FIRST_TASK_REWARD} " +
                 "points - exactly what \"${TutorialCoordinator.TUTORIAL_REWARD_NAME}\" costs. " +

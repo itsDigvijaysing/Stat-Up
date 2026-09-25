@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.statup.app.domain.model.Achievement
@@ -44,7 +45,13 @@ import dev.statup.app.ui.theme.*
 @Composable
 fun AchievementUnlockedDialog(
     achievement: Achievement,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /**
+     * Space to keep clear at the bottom. During the guided tour the coach-mark strip is anchored
+     * there and drawn after this, so without reserving room it covers the dismiss button - the very
+     * tap that advances the tour. Callers outside the tour pass zero.
+     */
+    bottomReserved: Dp = 0.dp
 ) {
     val pulse = rememberInfiniteTransition(label = "unlockPulse")
     val haloScale by pulse.animateFloat(
@@ -85,7 +92,10 @@ fun AchievementUnlockedDialog(
                 indication = null,
                 onClick = {}
             )
-            .padding(28.dp),
+            .padding(28.dp)
+            // Shrinks the centring box rather than the card, so the card stays centred in whatever
+            // space the coach-mark leaves instead of being pushed off the top.
+            .padding(bottom = bottomReserved),
         contentAlignment = Alignment.Center
     ) {
             Column(
