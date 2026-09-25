@@ -397,10 +397,13 @@ private fun MainShell(
         // a sibling drawn afterwards - painted straight over it.)
         LaunchedEffect(tutorialStep, pendingUnlock) {
             if (tutorialStep == TutorialStep.SEE_ACHIEVEMENT && pendingUnlock == null) {
-                // Give the unlock a moment to arrive; if nothing shows, move on by itself
-                // rather than stranding the tour on a step with no action left in it.
+                // Give the unlock a moment to arrive; if nothing shows, move on by itself rather
+                // than stranding the tour on a step with no action left in it. No recheck needed
+                // after the delay: pendingUnlock is a val re-derived from unlockQueue, so an
+                // arriving unlock changes this effect's own key and cancels/relaunches it before
+                // we'd get here - reaching this line already means nothing arrived.
                 kotlinx.coroutines.delay(1500)
-                if (pendingUnlock == null) onTutorialAcknowledge()
+                onTutorialAcknowledge()
             }
         }
 
