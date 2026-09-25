@@ -79,7 +79,7 @@
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
 
-    <!-- Adaptive launcher icon background — matches the dark of the ic_launcher_fg art so the
+    <!-- Adaptive launcher icon background - matches the dark of the ic_launcher_fg art so the
          opaque foreground blends to the mask edge under any launcher shape. -->
     <color name="ic_launcher_background">#010512</color>
 </resources>

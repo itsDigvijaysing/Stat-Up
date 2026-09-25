@@ -21,11 +21,11 @@ import dev.statup.app.R
  * future AI agent) doesn't have to repeat any of it.
  *
  * Channels follow the v3.1+ taxonomy:
- *  - [CHANNEL_SYNC] — Todoist sync results (low importance, no sound).
- *  - [CHANNEL_REMINDERS] — future: streak warnings, rank-down imminent.
+ *  - [CHANNEL_SYNC] - Todoist sync results (low importance, no sound).
+ *  - [CHANNEL_REMINDERS] - future: streak warnings, rank-down imminent.
  *
  * On Android 13+ the [Manifest.permission.POST_NOTIFICATIONS] permission must be granted by the
- * user before notifications appear — see [arePermissionsGranted].
+ * user before notifications appear - see [arePermissionsGranted].
  */
 class Notifier(private val context: Context) {
 
@@ -69,7 +69,7 @@ class Notifier(private val context: Context) {
     }
 
     fun showSyncResult(tasksProcessed: Int, pointsEarned: Int) {
-        if (tasksProcessed == 0) return // No new tasks — don't bother the user
+        if (tasksProcessed == 0) return // No new tasks - don't bother the user
         notify(
             id = NOTIF_SYNC_RESULT,
             channel = CHANNEL_SYNC,
@@ -89,19 +89,19 @@ class Notifier(private val context: Context) {
 
     /**
      * An active day promoted the player. Posted from DecayWorker because the promotion happens
-     * at midnight with the app closed — StatusViewModel's rank-up animation only fires when it
+     * at midnight with the app closed - StatusViewModel's rank-up animation only fires when it
      * observes the transition live, so without this the best moment in the loop is silent.
      */
     fun showRankUp(rankName: String) {
         notify(
             id = NOTIF_RANK_UP,
             channel = CHANNEL_REMINDERS,
-            title = "Rank up — $rankName! 🎉",
+            title = "Rank up - $rankName! 🎉",
             body = "Your work days and stats both cleared the bar. Open Stat Up to see your new status."
         )
     }
 
-    /** An idle day dropped the player a rank — nudge them to come back and climb. */
+    /** An idle day dropped the player a rank - nudge them to come back and climb. */
     fun showRankDown(rankName: String) {
         notify(
             id = NOTIF_RANK_DOWN,
@@ -111,14 +111,14 @@ class Notifier(private val context: Context) {
         )
     }
 
-    /** A Streak Freeze Shield absorbed an idle day — reassure and prompt re-engagement. */
+    /** A Streak Freeze Shield absorbed an idle day - reassure and prompt re-engagement. */
     fun showShieldUsed(shieldsLeft: Int) {
         notify(
             id = NOTIF_SHIELD_USED,
             channel = CHANNEL_REMINDERS,
             title = "Streak Freeze used 🛡️",
             body = if (shieldsLeft > 0) {
-                "A shield absorbed your idle day — streak safe. $shieldsLeft left."
+                "A shield absorbed your idle day - streak safe. $shieldsLeft left."
             } else {
                 "Your last shield absorbed your idle day. Complete a task to stay safe."
             }
@@ -131,7 +131,7 @@ class Notifier(private val context: Context) {
      * here defends against future callers forgetting the check.
      *
      * Lint can't see through the [arePermissionsGranted] helper call (it only recognises
-     * an inline `checkSelfPermission`), so MissingPermission is suppressed — the runtime
+     * an inline `checkSelfPermission`), so MissingPermission is suppressed - the runtime
      * guard on the first line is the real protection.
      */
     @SuppressLint("MissingPermission")

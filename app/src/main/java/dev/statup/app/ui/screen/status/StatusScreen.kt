@@ -27,9 +27,6 @@ import androidx.navigation.NavController
 import dev.statup.app.domain.model.Rank
 import dev.statup.app.domain.model.StatType
 import dev.statup.app.ui.components.glass.*
-import dev.statup.app.ui.components.HelpDialog
-import dev.statup.app.ui.components.HelpIconButton
-import dev.statup.app.ui.components.HelpPoint
 import dev.statup.app.ui.components.rpg.DailyQuoteCard
 import dev.statup.app.ui.components.StatPickerCaption
 import dev.statup.app.ui.components.rememberDefaultStat
@@ -47,7 +44,6 @@ fun StatusScreen(
     viewModel: StatusViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showHelp by remember { mutableStateOf(false) }
     var showMoodDialog by remember { mutableStateOf(false) }
     var showAddPointsDialog by remember { mutableStateOf(false) }
     var showTitlePicker by remember { mutableStateOf(false) }
@@ -83,16 +79,6 @@ fun StatusScreen(
             .padding(horizontal = 16.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Help affordance — the Status tab is where a confused user lands first, so the `?`
-        // has to be reachable here too, not only on Tasks/Rewards/Agent.
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            HelpIconButton(onClick = { showHelp = true })
-        }
-
         // Status Window (includes points now)
         StatusWindow(
             playerName = uiState.username,
@@ -106,7 +92,7 @@ fun StatusScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Daily quote — "system message of the day" under the character sheet. Hidden
+        // Daily quote - "system message of the day" under the character sheet. Hidden
         // until resolved; source configurable in Settings (offline pack by default).
         uiState.dailyQuote?.let { quote ->
             DailyQuoteCard(quote = quote)
@@ -173,15 +159,6 @@ fun StatusScreen(
         }
     }
 
-    if (showHelp) {
-        HelpDialog(
-            title = "Your Status",
-            intro = "This is your character sheet. Everything you finish in the app shows up here.",
-            points = STATUS_HELP,
-            onDismiss = { showHelp = false }
-        )
-    }
-
     // Mood Check-in Dialog
     if (showMoodDialog) {
         MoodCheckInDialog(
@@ -205,7 +182,7 @@ fun StatusScreen(
         )
     }
 
-    // Streak Shield Dialog — explain + buy.
+    // Streak Shield Dialog - explain + buy.
     if (showShieldDialog) {
         ShieldDialog(
             shieldsHeld = uiState.stats.streakShields,
@@ -219,7 +196,7 @@ fun StatusScreen(
         )
     }
 
-    // Title Picker Dialog — equip an unlocked achievement title (or none).
+    // Title Picker Dialog - equip an unlocked achievement title (or none).
     if (showTitlePicker) {
         TitlePickerDialog(
             titles = uiState.unlockedTitles,
@@ -258,7 +235,7 @@ private fun ShieldDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Skip a day without losing anything. One shield absorbs the idle " +
-                        "day automatically — no stat decay, streak and work days intact.",
+                        "day automatically - no stat decay, streak and work days intact.",
                     color = TextSecondary,
                     fontSize = 13.sp,
                     fontFamily = Inter,
@@ -520,7 +497,7 @@ private fun MoodCheckInDialog(
 
                     // Two plain Rows, not a LazyVerticalGrid pinned to 160.dp. Two rows need
                     // ~162dp (56dp button + 4dp + label), so the bottom row's labels were
-                    // clipped — and a larger system font scale clipped more. Rows wrap to
+                    // clipped - and a larger system font scale clipped more. Rows wrap to
                     // their content, so this holds at any font size or screen height.
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         moods.chunked(3).forEach { row ->
@@ -577,7 +554,7 @@ private fun AddPointsDialog(
     var description by remember { mutableStateOf("") }
 
     // Same rule as the mission dialog: default stat, then the offline guess, then whatever the
-    // user picks — their pick always wins.
+    // user picks - their pick always wins.
     val defaultStat = rememberDefaultStat()
     var pickedStat by remember { mutableStateOf<StatType?>(null) }
     val suggestion = rememberStatSuggestion(description)
@@ -719,20 +696,3 @@ private fun AddPointsDialog(
         }
     }
 }
-
-private val STATUS_HELP = listOf(
-    HelpPoint(
-        "Six stats, one hexagon",
-        "Points you earn raise the stat the task belongs to.",
-        "every ${dev.statup.app.domain.model.PlayerStats.POINTS_PER_STAT} points in a stat = +1"
-    ),
-    HelpPoint(
-        "Work days drive your rank",
-        "Any day you earn points counts. They add up and never reset.",
-        "tap your rank badge for the full table"
-    ),
-    HelpPoint(
-        "Points are also currency",
-        "Spending them in the Rewards tab never lowers your stats."
-    )
-)

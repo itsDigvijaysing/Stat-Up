@@ -25,6 +25,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation.NavHostController
@@ -47,7 +49,10 @@ import dev.statup.app.ui.screen.history.HistoryScreen
 import dev.statup.app.ui.screen.legal.PrivacyPolicyScreen
 import dev.statup.app.ui.screen.onboarding.OnboardingScreen
 import dev.statup.app.ui.screen.help.HowItWorksScreen
-import dev.statup.app.ui.screen.tutorial.TutorialScreen
+import dev.statup.app.ui.screen.tutorial.TutorialCoordinator
+import dev.statup.app.ui.screen.tutorial.TutorialIntroDialog
+import dev.statup.app.ui.screen.tutorial.TutorialOverlay
+import dev.statup.app.ui.screen.tutorial.TutorialStep
 import dev.statup.app.ui.screen.rewards.RewardsScreen
 import dev.statup.app.ui.screen.settings.SettingsScreen
 import dev.statup.app.ui.screen.stats.StatsScreen
@@ -69,6 +74,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.koinInject
+
+/** Routes that own a bottom-bar tab; everything else is a hidden detail screen. */
+private val bottomNavRoutes = listOf(
+    Routes.STATUS, Routes.TASKS, Routes.REWARDS, Routes.AGENT, Routes.SETTINGS
+)
 
 private val bottomNavItems = listOf(
     BottomNavItem("Status", Icons.Outlined.Shield, Routes.STATUS),
@@ -102,6 +112,15 @@ fun AppNavigation(
     val upgradeRunner = koinInject<StatUpgradeRunner>()
     val upgradeState by upgradeRunner.state.collectAsStateWithLifecycle()
 
+    // The guided first run drives the real tabs, so it starts once onboarding is done and
+    // runs inside the shell rather than replacing it.
+    val tutorialCoordinator = koinInject<TutorialCoordinator>()
+    val tutorialStep by tutorialCoordinator.step.collectAsStateWithLifecycle()
+    val tutorialScope = rememberCoroutineScope()
+    LaunchedEffect(onboarded, tutorialDone) {
+        if (onboarded == true && tutorialDone == false) tutorialCoordinator.start()
+    }
+
     CompositionLocalProvider(LocalHapticsEnabled provides hapticsEnabled) {
         Box(modifier = Modifier.fillMaxSize()) {
             when {
@@ -110,12 +129,24 @@ fun AppNavigation(
                 onboarded == null -> Box(modifier = Modifier.fillMaxSize().background(BackgroundBase))
                 onboarded == false -> OnboardingScreen()
                 tutorialDone == null -> Box(modifier = Modifier.fillMaxSize().background(BackgroundBase))
-                tutorialDone == false -> TutorialScreen()
-                else -> MainShell(navController)
+                else -> MainShell(
+                    navController,
+                    tutorialStep,
+                    onTutorialAcknowledge = {
+                        tutorialScope.launch { tutorialCoordinator.onAchievementAcknowledged() }
+                    }
+                )
             }
 
             if (upgradeState.isRunning) {
                 StatUpgradeOverlay(state = upgradeState)
+            }
+
+            if (tutorialStep == TutorialStep.INTRO) {
+                TutorialIntroDialog(
+                    onStart = { tutorialScope.launch { tutorialCoordinator.beginTour() } },
+                    onSkip = { tutorialScope.launch { tutorialCoordinator.finish() } }
+                )
             }
         }
     }
@@ -173,24 +204,28 @@ private fun StatUpgradeOverlay(state: StatUpgradeState) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MainShell(navController: NavHostController) {
+private fun MainShell(
+    navController: NavHostController,
+    tutorialStep: TutorialStep? = null,
+    onTutorialAcknowledge: () -> Unit = {}
+) {
     // Ask for notification permission here (after onboarding), not over the intro.
     RequestNotificationPermissionOnce()
+
+
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Routes.STATUS
 
-    // Scaffold's bottomBar slot reserves a FIXED height for content padding — it never
+    // Scaffold's bottomBar slot reserves a FIXED height for content padding - it never
     // accounts for the IME, so when the keyboard opens over AgentScreen's chat input, that
     // fixed reservation and the keyboard height fight each other (wrong gap either way).
     // Hiding the bar while the keyboard is visible removes the fixed competitor entirely,
     // leaving AgentScreen's own imePadding() as the only thing sizing the bottom space.
     val imeVisible = WindowInsets.isImeVisible
-    val showBottomBar = currentRoute in listOf(
-        Routes.STATUS, Routes.TASKS, Routes.REWARDS, Routes.AGENT, Routes.SETTINGS
-    ) && !imeVisible
+    val showBottomBar = currentRoute in bottomNavRoutes && !imeVisible
 
-    // Single HazeState shared across the whole shell — content is the "source", glass
+    // Single HazeState shared across the whole shell - content is the "source", glass
     // primitives (cards, bottom bar) are "effects" that sample the source at blur time.
     val hazeState = rememberHazeState()
 
@@ -205,6 +240,10 @@ private fun MainShell(navController: NavHostController) {
                     GlassBottomBar(
                         items = bottomNavItems,
                         selectedRoute = currentRoute,
+                        // Achievements has no tab of its own, so point at Status - the screen
+                        // it is reached from.
+                        highlightRoute = tutorialStep?.targetRoute?.takeIf { it != currentRoute }
+                            ?.let { if (it == Routes.ACHIEVEMENTS) Routes.STATUS else it },
                         onItemClick = { route ->
                             if (route != currentRoute) {
                                 navController.navigate(route) {
@@ -218,6 +257,8 @@ private fun MainShell(navController: NavHostController) {
                 }
             }
         ) { paddingValues ->
+            // Box so the tutorial coach-mark can sit over the NavHost rather than beside it.
+            Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
                 navController = navController,
                 startDestination = Routes.STATUS,
@@ -225,7 +266,7 @@ private fun MainShell(navController: NavHostController) {
                     .padding(paddingValues)
                     // Without this, descendants that read WindowInsets directly (e.g.
                     // AgentScreen's imePadding()) don't know paddingValues already reserved
-                    // the bottom-bar's height, so they stack the full inset on top of it —
+                    // the bottom-bar's height, so they stack the full inset on top of it -
                     // a permanent gap the size of the bottom bar between content and the IME.
                     .consumeWindowInsets(paddingValues)
                     .hazeSourceOrFallback(),
@@ -266,13 +307,34 @@ private fun MainShell(navController: NavHostController) {
                     HowItWorksScreen(navController = navController)
                 }
             }
+
+            tutorialStep?.takeIf { it != TutorialStep.INTRO }?.let { step ->
+                TutorialOverlay(
+                    step = step,
+                    isOnTargetTab = currentRoute == step.targetRoute,
+                    currentRoute = currentRoute,
+                    hasBottomBar = showBottomBar,
+                    onAcknowledge = {
+                        // Achievements is a hidden route with no bottom bar, so finishing that
+                        // step while still on it would point at a tab the user cannot see.
+                        // Returning to the shell is the natural end of "done looking at this" -
+                        // it is a back, not a teleport between tabs.
+                        if (currentRoute !in bottomNavRoutes) navController.popBackStack()
+                        onTutorialAcknowledge()
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = paddingValues.calculateBottomPadding() + 12.dp)
+                )
+            }
+            }  // Box
         }
     }
     }  // CompositionLocalProvider
 }
 
 /**
- * Asks for POST_NOTIFICATIONS once on Android 13+. Decline is fine — the Notifier re-checks
+ * Asks for POST_NOTIFICATIONS once on Android 13+. Decline is fine - the Notifier re-checks
  * permission before every notify call, so refusal silently disables notifications. No UI shows
  * if the permission isn't needed (API < 33) or is already granted.
  */
@@ -281,7 +343,7 @@ private fun RequestNotificationPermissionOnce() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { /* result ignored — Notifier re-checks before each notify call */ }
+    ) { /* result ignored - Notifier re-checks before each notify call */ }
     LaunchedEffect(Unit) {
         launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }

@@ -2,7 +2,7 @@
 """Train the Stat Up task->stat classifier.
 
 Hashed character n-grams + multinomial logistic regression (the fastText shape:
-a linear model over n-gram features). Pure numpy — no sklearn, no torch.
+a linear model over n-gram features). Pure numpy - no sklearn, no torch.
 
 Exports an int8-quantised weight blob that the Android app loads from assets.
 Keep the constants below in sync with the Kotlin reader.

@@ -37,7 +37,7 @@ enum class AchievementCategory(val displayName: String, val color: Color, val em
 }
 
 object Achievements {
-    // IDs here must stay in sync with the ones AchievementTracker checks — when the tracker
+    // IDs here must stay in sync with the ones AchievementTracker checks - when the tracker
     // calls `updateProgress(id, …)` for an id that isn't seeded, the call is a silent no-op.
     val ALL = listOf(
         // Streak
@@ -60,6 +60,9 @@ object Achievements {
         Achievement("balanced", "Balanced", "Raise every stat to 25", "⚖️", AchievementCategory.STATS, 25, rewardPoints = 120),
 
         // Tasks
+        // Pays the 45 that, with the tutorial's 5-point task, exactly affords the 50-point
+        // "Favorite Meal" the guided first run ends on.
+        Achievement("first_task", "First Step", "Complete your first task", "👣", AchievementCategory.TASKS, 1, rewardPoints = 45),
         Achievement("tasks_10", "Task Beginner", "Complete 10 tasks", "✅", AchievementCategory.TASKS, 10, rewardPoints = 25),
         Achievement("tasks_50", "Task Veteran", "Complete 50 tasks", "✅", AchievementCategory.TASKS, 50, rewardPoints = 80),
         Achievement("tasks_100", "Task Centurion", "Complete 100 tasks", "🎯", AchievementCategory.TASKS, 100, rewardPoints = 150),

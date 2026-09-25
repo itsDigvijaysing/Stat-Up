@@ -9,8 +9,8 @@ import java.time.LocalDate
 
 /**
  * Owns mission CRUD, the double-tap completion guard, and the daily-completion reset. Extracted
- * from TasksViewModel so the reset can run from background work (DecayWorker) — not just when the
- * Tasks screen happens to be open — and so the completion guard lives in one place.
+ * from TasksViewModel so the reset can run from background work (DecayWorker) - not just when the
+ * Tasks screen happens to be open - and so the completion guard lives in one place.
  */
 class MissionRepository(
     private val missionDao: MissionDao,
@@ -62,7 +62,7 @@ class MissionRepository(
 
     /**
      * Resets daily-mission completions at most once per local day. Safe to call from the midnight
-     * DecayWorker and on Tasks-screen resume — gated on lastMissionResetDay so completed daily
+     * DecayWorker and on Tasks-screen resume - gated on lastMissionResetDay so completed daily
      * missions clear even on days the user never opens the Tasks tab.
      */
     suspend fun resetDailyIfNeeded() {

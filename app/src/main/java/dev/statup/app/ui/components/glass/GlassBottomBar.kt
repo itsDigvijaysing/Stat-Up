@@ -1,7 +1,12 @@
 package dev.statup.app.ui.components.glass
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,14 +47,16 @@ fun GlassBottomBar(
     items: List<BottomNavItem>,
     selectedRoute: String,
     onItemClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Pulses one tab to point the guided tutorial at its next destination. */
+    highlightRoute: String? = null
 ) {
     val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
     Box(
         // No fixed height: the glass must paint all the way to the screen edge (the app is
         // edge-to-edge), while the nav items sit above the system navigation bar. The Row
-        // below owns the height — BottomBarHeight for content, plus the navigation-bar inset.
+        // below owns the height - BottomBarHeight for content, plus the navigation-bar inset.
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
@@ -101,6 +108,7 @@ fun GlassBottomBar(
                 BottomNavItemView(
                     item = item,
                     isSelected = item.route == selectedRoute,
+                    isHighlighted = item.route == highlightRoute,
                     onClick = { onItemClick(item.route) }
                 )
             }
@@ -112,18 +120,32 @@ fun GlassBottomBar(
 private fun BottomNavItemView(
     item: BottomNavItem,
     isSelected: Boolean,
+    isHighlighted: Boolean = false,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
+    // Slow breathing pulse so the tutorial can point at a tab without hijacking navigation -
+    // the user still taps it themselves.
+    val pulse = rememberInfiniteTransition(label = "navPulse")
+    val pulseAlpha by pulse.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "navPulseAlpha"
+    )
+
     val iconColor by animateColorAsState(
-        targetValue = if (isSelected) AccentPrimary else TextSecondary,
+        targetValue = if (isSelected || isHighlighted) AccentPrimary else TextSecondary,
         animationSpec = tween(200),
         label = "iconColor"
     )
 
     val textColor by animateColorAsState(
-        targetValue = if (isSelected) AccentPrimary else TextSecondary,
+        targetValue = if (isSelected || isHighlighted) AccentPrimary else TextSecondary,
         animationSpec = tween(200),
         label = "textColor"
     )
@@ -149,12 +171,26 @@ private fun BottomNavItemView(
     ) {
         // FIXED-size indicator slot (48x32) for every item, selected or not. The pill used
         // to exist only while selected inside a wrap-content Box, so selecting a tab grew
-        // that item and re-laid-out the whole SpaceEvenly row — the visible "bar nudge" on
+        // that item and re-laid-out the whole SpaceEvenly row - the visible "bar nudge" on
         // every tab tap. With constant geometry, only colors/alpha animate.
         Box(
             modifier = Modifier.size(width = 48.dp, height = 32.dp),
             contentAlignment = Alignment.Center
         ) {
+            // The tutorial's pointer. An outlined ring, NOT a filled pill: a filled pill is
+            // exactly how this bar draws the *selected* tab, so highlighting that way told the
+            // user "you are here" when it meant "tap here". Background stays default.
+            if (isHighlighted && !isSelected) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 48.dp, height = 32.dp)
+                        .border(
+                            width = 2.dp,
+                            color = AccentPrimary.copy(alpha = pulseAlpha),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                )
+            }
             if (isSelected) {
                 Box(
                     modifier = Modifier

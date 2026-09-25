@@ -25,7 +25,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 // flatMapLatest is still marked experimental in kotlinx-coroutines. It is used deliberately here
-// to re-issue the day-scoped queries when the local day rolls over — opting in explicitly rather
+// to re-issue the day-scoped queries when the local day rolls over - opting in explicitly rather
 // than building on an unacknowledged warning.
 @OptIn(ExperimentalCoroutinesApi::class)
 class StatusViewModel(
@@ -42,7 +42,7 @@ class StatusViewModel(
     val uiState: StateFlow<StatusUiState> = _uiState.asStateFlow()
 
     // One-time rank-up events survive a no-collector gap (Status tab off-composition) via a
-    // buffered Channel and are delivered exactly once — see RankUpNotifier.
+    // buffered Channel and are delivered exactly once - see RankUpNotifier.
     private val rankUpNotifier = RankUpNotifier()
     val rankUpEvent: Flow<Rank> = rankUpNotifier.events
 
@@ -166,7 +166,7 @@ class StatusViewModel(
      * Resolve the day's quote. Re-resolves when the local day rolls over (dayStartFlow)
      * or the user changes the source in Settings (quoteSource). Cache hits inside
      * QuoteRepository make repeat emissions free; failures resolve to the offline pack
-     * inside the repository, so this never errors — worst case the card stays hidden.
+     * inside the repository, so this never errors - worst case the card stays hidden.
      */
     private suspend fun loadDailyQuote() {
         combine(dayRangeFlow, userPreferences.quoteSource) { _, _ -> }

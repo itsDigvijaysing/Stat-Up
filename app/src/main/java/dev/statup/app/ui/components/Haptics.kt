@@ -6,7 +6,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 
-/** Whether in-app haptics are enabled — mirrors the Settings "Haptic Feedback" toggle. */
+/** Whether in-app haptics are enabled - mirrors the Settings "Haptic Feedback" toggle. */
 val LocalHapticsEnabled = staticCompositionLocalOf { true }
 
 /**

@@ -26,7 +26,7 @@ class TodoistSyncWorker(
                 }
                 is SyncResult.NotConnected -> Result.success()
                 is SyncResult.AuthFailed -> {
-                    // Token is invalid/expired — retrying won't help until user re-enters it.
+                    // Token is invalid/expired - retrying won't help until user re-enters it.
                     Log.w(TAG, "Auth failed during sync: ${result.message}")
                     notifier.showSyncAuthFailure()
                     Result.success()

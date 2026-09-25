@@ -16,7 +16,7 @@ import org.junit.runner.RunWith
  * each step. If a future version bump forgets to add a migration (which would otherwise
  * silently wipe user data on update), this test fails.
  *
- * Instrumented — run on a device/emulator (e.g. Waydroid):
+ * Instrumented - run on a device/emulator (e.g. Waydroid):
  *     ./gradlew connectedDebugAndroidTest
  */
 @RunWith(AndroidJUnit4::class)
@@ -47,14 +47,14 @@ class MigrationTest {
      * Data-survival guard for MIGRATION_3_4. Seeds a v3 database with two duplicate-externalId
      * rows and one NULL-externalId manual row, migrates to the current version, and asserts the
      * dedupe kept the MIN(id) survivor, left the manual row untouched, and created the unique
-     * index. The empty-DB test above only validates the schema — a regression in the dedupe
+     * index. The empty-DB test above only validates the schema - a regression in the dedupe
      * DELETE (e.g. dropping the `externalId IS NOT NULL` guard) would pass it while silently
      * wiping real transaction history on update; this test catches that.
      */
     @Test
     fun migration3to4_dedupesDuplicatesAndPreservesManualRows() {
         helper.createDatabase(testDb, 3).apply {
-            // Two Todoist rows sharing externalId 'ext-dup' — MIN(id) = 10 must survive...
+            // Two Todoist rows sharing externalId 'ext-dup' - MIN(id) = 10 must survive...
             execSQL("INSERT INTO transactions (id, type, source, points, externalId, createdAt) VALUES (10, 'EARN', 'TODOIST', 4, 'ext-dup', 1000)")
             execSQL("INSERT INTO transactions (id, type, source, points, externalId, createdAt) VALUES (20, 'EARN', 'TODOIST', 4, 'ext-dup', 2000)")
             // ...a unique Todoist row that must be kept...

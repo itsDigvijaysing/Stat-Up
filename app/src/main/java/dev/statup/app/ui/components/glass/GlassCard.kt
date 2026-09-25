@@ -57,7 +57,7 @@ fun GlassCard(
             // Replaces the previous static gradient fill. On older devices Haze auto-falls-back
             // to a translucent scrim, so the card stays readable.
             .hazeEffectOrFallback(elevated = elevated)
-            // A subtle tint sits on top of the blur — keeps brand color visible without losing readability.
+            // A subtle tint sits on top of the blur - keeps brand color visible without losing readability.
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
@@ -68,7 +68,7 @@ fun GlassCard(
                 )
             )
             .drawBehind {
-                // Inner glow effect — keep the soft highlight for "lit from above" feel
+                // Inner glow effect - keep the soft highlight for "lit from above" feel
                 drawRect(
                     brush = Brush.radialGradient(
                         colors = listOf(

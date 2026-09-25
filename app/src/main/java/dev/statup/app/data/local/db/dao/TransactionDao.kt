@@ -31,7 +31,7 @@ interface TransactionDao {
      * Every local date on which at least one point was earned, ascending (yyyy-MM-dd).
      *
      * This is the true history behind the Work Day counter. The pre-v4 column reset to 0 on
-     * every promotion so it only ever held 0..5 and carries no usable history — the one-time
+     * every promotion so it only ever held 0..5 and carries no usable history - the one-time
      * upgrade replays the new model over these dates instead. `localtime` matches how
      * DecayEngine decides an active day.
      */
@@ -41,12 +41,12 @@ interface TransactionDao {
     )
     suspend fun getActiveEarnDays(): List<String>
 
-    /** Lifetime points ever earned in one stat — the input to the one-time stat recompute. */
+    /** Lifetime points ever earned in one stat - the input to the one-time stat recompute. */
     @Query("SELECT IFNULL(SUM(points), 0) FROM transactions WHERE type = 'EARN' AND statType = :statType")
     suspend fun getLifetimePointsForStat(statType: String): Int
 
     /**
-     * Completed earns that never got a stat assigned — the classifier backfill's work list.
+     * Completed earns that never got a stat assigned - the classifier backfill's work list.
      *
      * Achievement payouts are excluded: they are an EARN with no stat by design (a payout is not
      * a task), so leaving them in would mean the backfill's "remaining" count could never reach

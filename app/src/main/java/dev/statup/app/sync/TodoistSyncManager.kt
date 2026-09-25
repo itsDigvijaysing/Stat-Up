@@ -25,13 +25,13 @@ class TodoistSyncManager(
         return try {
             // Always request the endpoint's maximum. /tasks/completed is hard-capped at 200
             // and exposes no cursor (measured 2026-08-21: response is {items, projects,
-            // sections} with no next_cursor), so there is nothing to gain by asking for less —
+            // sections} with no next_cursor), so there is nothing to gain by asking for less -
             // and asking for only 30 meant a burst of completions between syncs could fall off
             // the end. externalId dedupe makes the re-read free.
             //
             // NOTE: 200 is therefore a ceiling on total importable history via this endpoint.
             // Reaching further back needs /tasks/completed/by_completion_date, which pages in
-            // 3-month windows but keys items by TASK id where this one keys by COMPLETION id —
+            // 3-month windows but keys items by TASK id where this one keys by COMPLETION id -
             // switching would re-award everything already imported. See docs/ for the plan.
             val result = todoistApi.getCompletedTasks(token, limit = MAX_COMPLETED_PER_SYNC)
 
@@ -39,6 +39,9 @@ class TodoistSyncManager(
                 onSuccess = { tasks ->
                     // Cache stat mappings once per sync (avoid N round trips for N tasks)
                     val mappingsCache = pointsRepository.loadStatMappings()
+                    // Read once per run, not per task. When disabled the classifier is never
+                    // consulted and unlabelled tasks arrive with no stat, exactly as before.
+                    val autoCategorise = userPreferences.isAutoCategoriseEnabled()
                     // Resolved at most once per sync run, and only if a labelled task actually
                     // needs it (it is a DataStore read, not free).
                     var cachedDefaultStat: dev.statup.app.domain.model.StatType? = null
@@ -55,16 +58,16 @@ class TodoistSyncManager(
                         val labels = completedTask.labels
                         // Resolution order: a Todoist label the user mapped wins outright;
                         // otherwise the offline classifier reads the task title. An unlabelled
-                        // task used to arrive with statType = null — the points landed in the
+                        // task used to arrive with statType = null - the points landed in the
                         // balance and grew no stat at all. When the model isn't confident the
                         // behaviour is unchanged from before, so this can only add stats,
                         // never mis-assign one that was previously correct.
                         val statType = pointsRepository.routeByLabel(labels, mappingsCache)
-                            ?: taskClassifier.classify(completedTask.content)?.stat
+                            ?: (if (autoCategorise) taskClassifier.classify(completedTask.content)?.stat else null)
                             ?: if (labels.isNotEmpty()) defaultStat() else null
 
                         // tryEarnExternalPoints handles dedup atomically via the unique index
-                        // on transactions.externalId — returns null if this task was already synced.
+                        // on transactions.externalId - returns null if this task was already synced.
                         val tx = pointsRepository.tryEarnExternalPoints(
                             externalId = externalId,
                             points = points,
@@ -83,7 +86,7 @@ class TodoistSyncManager(
 
                     // Run achievement checks ONCE after the loop and off the sync's critical
                     // path. onPointsEarned keys off cumulative totals (it writes absolute
-                    // progress), so once-after-the-loop is identical to per-task — but a thrown
+                    // progress), so once-after-the-loop is identical to per-task - but a thrown
                     // achievement check can no longer downgrade an already-successful, already
                     // idempotently-awarded sync to a retry + false "sync failed" notification.
                     // It also collapses ~N achievement passes (one per task) into a single pass.
@@ -124,6 +127,6 @@ sealed class SyncResult {
     data object NotConnected : SyncResult()
     data class Success(val tasksProcessed: Int, val pointsEarned: Int) : SyncResult()
     data class Error(val message: String) : SyncResult()
-    /** Token invalid/expired — do not retry until user re-enters token. */
+    /** Token invalid/expired - do not retry until user re-enters token. */
     data class AuthFailed(val message: String) : SyncResult()
 }

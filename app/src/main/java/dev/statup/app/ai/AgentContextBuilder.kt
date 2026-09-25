@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.first
 /**
  * Builds the "current state" block that's injected as the tail of the system instruction.
  *
- * Kept compact (~500 tokens worst case) so it doesn't dominate the prompt budget — the agent
+ * Kept compact (~500 tokens worst case) so it doesn't dominate the prompt budget - the agent
  * mostly needs broad context, not every individual transaction.
  *
  * Caches nothing: each call re-reads the DB. ViewModel calls it once per `sendMessage` so the
@@ -29,12 +29,12 @@ class AgentContextBuilder(
         // (rather than fetching the recent N of any type and filtering in memory) ensures the
         // earns block is never starved by a run of redemptions/non-earn rows.
         // Truncate descriptions to 40 chars so long Todoist task titles don't blow the budget.
-        // Drop dates — the AI rarely reasons about specific calendar days and they cost tokens.
+        // Drop dates - the AI rarely reasons about specific calendar days and they cost tokens.
         val recent = transactionDao.getRecentByType("EARN", 5).first()
             .asSequence()
             .joinToString("\n") {
                 val label = (it.description ?: it.source).take(40)
-                val stat = it.statType ?: "—"
+                val stat = it.statType ?: "-"
                 "- $label (+${it.points} $stat)"
             }
             .ifBlank { "- (none yet)" }
@@ -65,7 +65,7 @@ class AgentContextBuilder(
     }
 
     companion object {
-        const val EMPTY_STATE_FALLBACK = "(Player state unavailable — they may have just installed the app.)"
+        const val EMPTY_STATE_FALLBACK = "(Player state unavailable - they may have just installed the app.)"
     }
 }
 
@@ -81,16 +81,16 @@ object AgentPersona {
         You are the in-app coach for Stat Up, an RPG-themed productivity app. Six stats:
         STR (training), INT (study), WIS (reflection), DEX (skill), CHA (social), VIT (health).
         Ranks E→D→C→B→A→S→EX. Ranking up needs BOTH enough cumulative "work days" (any day
-        they earn points) AND a high enough average stat — the exact numbers are in the state
+        they earn points) AND a high enough average stat - the exact numbers are in the state
         block below. Work days never reset on promotion. A missed day costs 1 work day and 1
         point off their highest stat; losing stats alone never demotes them.
         5 points earned in a stat = +1 to that stat.
 
-        Style rules — follow strictly:
+        Style rules - follow strictly:
           - Be terse. 2-4 short sentences by default. No filler greetings, no "Sure!", no recap.
           - Use markdown: **bold** for key numbers, bullet lists for suggestions, `code` for stat names like `INT`.
           - Ground every claim in the player state below. Never invent numbers.
-          - When suggesting missions: at most 3 bullets, each one line: "- Action — `STAT` (+pts)".
+          - When suggesting missions: at most 3 bullets, each one line: "- Action - `STAT` (+pts)".
           - You cannot create missions yourself. End with "Add these in the Tasks tab." only if you listed missions.
           - Off-topic question? One-line redirect, then stop.
     """.trimIndent()

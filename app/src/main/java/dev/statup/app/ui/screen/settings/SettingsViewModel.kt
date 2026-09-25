@@ -52,7 +52,8 @@ class SettingsViewModel(
                 userPreferences.showDecayAnimations,
                 userPreferences.hapticFeedback,
                 userPreferences.hexagonStyle,
-                userPreferences.quoteSource
+                userPreferences.quoteSource,
+                userPreferences.autoCategorise
             ) { values: Array<Any?> ->
                 SettingsUiState(
                     username = values[0] as String,
@@ -63,6 +64,7 @@ class SettingsViewModel(
                     hapticFeedback = values[5] as Boolean,
                     hexagonStyle = values[6] as String,
                     quoteSource = values[7] as String,
+                    autoCategorise = values[8] as Boolean,
                     isLoading = false
                 )
             }.collect { state ->
@@ -107,6 +109,10 @@ class SettingsViewModel(
         }
     }
 
+    fun updateAutoCategorise(enabled: Boolean) {
+        viewModelScope.launch { userPreferences.setAutoCategorise(enabled) }
+    }
+
     fun updateQuoteSource(source: String) {
         viewModelScope.launch {
             userPreferences.setQuoteSource(source)
@@ -124,7 +130,7 @@ class SettingsViewModel(
 
     /**
      * Save Gemini API key. Pass null/blank to disconnect.
-     * No validation here — the agent surfaces auth errors when the user first chats.
+     * No validation here - the agent surfaces auth errors when the user first chats.
      * (Gemini doesn't have a cheap ping endpoint; we don't want to burn a quota call on save.)
      */
     fun setGeminiApiKey(key: String?) {
@@ -158,7 +164,7 @@ class SettingsViewModel(
     }
 
     /**
-     * Classify the completed tasks that never got a stat. Only ever fills in blanks — a
+     * Classify the completed tasks that never got a stat. Only ever fills in blanks - a
      * category the user chose, or one a Todoist label set, is left alone.
      */
     fun assignMissingCategories() {
@@ -199,7 +205,7 @@ class SettingsViewModel(
             playerRepository.initializeStats()
             achievementRepository.initializeAchievements()
             StatMappingSeeder.seed(database, statMappingDao)
-            // A full reset is a fresh start, so the starter content comes back with it —
+            // A full reset is a fresh start, so the starter content comes back with it -
             // clearAll() already dropped the "seeded" flag, but re-seeding here means the
             // tabs aren't empty until the next process start.
             StarterContentSeeder.seed(database, missionDao, rewardDao)
@@ -217,8 +223,9 @@ data class SettingsUiState(
     val hapticFeedback: Boolean = true,
     val hexagonStyle: String = "simple",
     val quoteSource: String = "OFFLINE",
+    val autoCategorise: Boolean = true,
     val isLoading: Boolean = true,
-    /** Completed earns still missing a stat — drives the "Assign missing categories" row. */
+    /** Completed earns still missing a stat - drives the "Assign missing categories" row. */
     val uncategorisedTasks: Int = 0,
     val backfill: BackfillUiState = BackfillUiState.Idle
 )

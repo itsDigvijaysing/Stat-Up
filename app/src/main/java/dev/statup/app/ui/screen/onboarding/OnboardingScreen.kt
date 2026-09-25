@@ -52,17 +52,17 @@ private val steps = listOf(
     OnboardingStep(
         Icons.AutoMirrored.Outlined.TrendingUp,
         "Welcome to Stat Up",
-        "Turn the things you already do into a character you level up — one task at a time."
+        "Turn the things you already do into a character you level up - one task at a time."
     ),
     OnboardingStep(
         Icons.Outlined.AutoGraph,
         "Level up six stats",
-        "Completing tasks and missions earns points that raise STR, INT, WIS, DEX, CHA and VIT. Every day you earn something is a work day, and work days plus your average stat carry you up the ranks E → EX. Miss a day and you lose a work day and a point off your highest stat — so keep showing up."
+        "Completing tasks and missions earns points that raise STR, INT, WIS, DEX, CHA and VIT. Every day you earn something is a work day, and work days plus your average stat carry you up the ranks E → EX. Miss a day and you lose a work day and a point off your highest stat - so keep showing up."
     ),
     OnboardingStep(
         Icons.Outlined.CardGiftcard,
         "Spend what you earn",
-        "Trade points for rewards you define yourself. Todoist sync and the AI coach are optional add-ons — everything else works fully offline, on your device."
+        "Trade points for rewards you define yourself. Todoist sync and the AI coach are optional add-ons - everything else works fully offline, on your device."
     )
 )
 
@@ -77,7 +77,7 @@ fun OnboardingScreen(viewModel: OnboardingViewModel = koinViewModel()) {
         AmbientBackground()
         Column(
             // Onboarding renders outside MainShell's Scaffold, so nothing else reserves room
-            // for the system bars — without this the "Next" button sits under the navigation
+            // for the system bars - without this the "Next" button sits under the navigation
             // bar (gesture pill or 3-button alike). AmbientBackground stays edge-to-edge.
             modifier = Modifier
                 .fillMaxSize()

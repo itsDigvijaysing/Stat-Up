@@ -2,7 +2,7 @@
 <data-extraction-rules>
     <cloud-backup>
         <!-- DataStore (username, onboarding flag, settings) IS backed up so it restores
-             together with the Room DB — see backup_rules.xml. -->
+             together with the Room DB - see backup_rules.xml. -->
         <!-- Device-bound AndroidKeyStore master key isn't backed up; the encrypted blobs
              would be undecryptable after restore, so exclude the encrypted prefs. -->
         <exclude domain="sharedpref" path="secret_prefs.xml"/>

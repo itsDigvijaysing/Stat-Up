@@ -47,7 +47,7 @@
 -keep class io.ktor.** { *; }
 -keep class kotlinx.coroutines.** { *; }
 
-# WorkManager — workers are instantiated reflectively by the default WorkerFactory
+# WorkManager - workers are instantiated reflectively by the default WorkerFactory
 -keep class dev.statup.app.sync.DecayWorker { <init>(android.content.Context, androidx.work.WorkerParameters); }
 -keep class dev.statup.app.sync.TodoistSyncWorker { <init>(android.content.Context, androidx.work.WorkerParameters); }
 
@@ -58,7 +58,7 @@
 
 # Koin
 # Koin 3.x resolves dependencies through the explicit `single { }` / `viewModel { }` lambdas in
-# AppModule.kt — constructor reflection is never used, so no app-wide constructor keep is needed.
+# AppModule.kt - constructor reflection is never used, so no app-wide constructor keep is needed.
 # ViewModels are kept because androidx.lifecycle instantiates them reflectively.
 -keepnames class androidx.lifecycle.ViewModel
 -keepclassmembers class * extends androidx.lifecycle.ViewModel {
@@ -67,7 +67,7 @@
 
 # Compose
 # Do NOT add `-keep class androidx.compose.** { *; }` here. Compose ships its own consumer
-# ProGuard rules, and a blanket keep defeats R8 across the whole toolkit — most visibly it
+# ProGuard rules, and a blanket keep defeats R8 across the whole toolkit - most visibly it
 # retains every icon in material-icons-extended (11,408 classes / ~15 MB of DEX) when the app
 # references about 25 of them. Measured 2026-08-17: removing it cut the release AAB from
 # 25.3 MB to the size recorded in CLAUDE.md.

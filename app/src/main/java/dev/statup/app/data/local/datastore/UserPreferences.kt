@@ -20,8 +20,8 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "us
  * through [SecretStorage] (AES-256-GCM encrypted). The first read of a secret
  * migrates any legacy plain-text value out of DataStore and into encrypted storage.
  *
- * Implements [DailyQuoteStore] — the narrow slice QuoteRepository needs (source setting +
- * day-keyed quote cache) — so the repository stays unit-testable without a Context.
+ * Implements [DailyQuoteStore] - the narrow slice QuoteRepository needs (source setting +
+ * day-keyed quote cache) - so the repository stays unit-testable without a Context.
  */
 class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayStore, StatUpgradeStore {
 
@@ -34,7 +34,7 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
 
     private object Keys {
         val USERNAME = stringPreferencesKey("username")
-        // Legacy keys — read once by migrateLegacySecret(), then deleted from DataStore.
+        // Legacy keys - read once by migrateLegacySecret(), then deleted from DataStore.
         val TODOIST_TOKEN_LEGACY = stringPreferencesKey("todoist_token")
         val GEMINI_API_KEY_LEGACY = stringPreferencesKey("gemini_api_key")
         val DEFAULT_STAT = stringPreferencesKey("default_stat")
@@ -42,10 +42,18 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
         val LAST_SYNC_TIME = longPreferencesKey("last_sync_time")
         val SHOW_DECAY_ANIMATIONS = booleanPreferencesKey("show_decay_animations")
         val HAPTIC_FEEDBACK = booleanPreferencesKey("haptic_feedback")
+        // Master switch for the on-device stat classifier. Off means the model is never asked
+        // for a guess anywhere - and since the 96 KB blob loads lazily on first use, it is
+        // never even read off disk.
+        val AUTO_CATEGORISE = booleanPreferencesKey("auto_categorise")
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
         // Guided tutorial that runs once after onboarding, before the main shell unlocks.
         val TUTORIAL_COMPLETE = booleanPreferencesKey("tutorial_complete")
-        // Starter missions/rewards are seeded once and never again — deleting the samples
+        // Which tutorial step the user is on. Persisted because the tour spans several real
+        // screens and can easily outlive the process - without this, a restart mid-tour
+        // replays the intro and asks for work the user has already done.
+        val TUTORIAL_STEP = stringPreferencesKey("tutorial_step")
+        // Starter missions/rewards are seeded once and never again - deleting the samples
         // must be permanent, so this is a flag rather than an "is the table empty" check.
         val STARTER_CONTENT_SEEDED = booleanPreferencesKey("starter_content_seeded")
         // Version of the stat curve the stored stats were built with. Bumping the constant
@@ -74,6 +82,7 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
     val lastSyncTime: Flow<Long> = context.dataStore.data.map { it[Keys.LAST_SYNC_TIME] ?: 0L }
     val showDecayAnimations: Flow<Boolean> = context.dataStore.data.map { it[Keys.SHOW_DECAY_ANIMATIONS] ?: true }
     val hapticFeedback: Flow<Boolean> = context.dataStore.data.map { it[Keys.HAPTIC_FEEDBACK] ?: true }
+    val autoCategorise: Flow<Boolean> = context.dataStore.data.map { it[Keys.AUTO_CATEGORISE] ?: true }
     val onboardingComplete: Flow<Boolean> = context.dataStore.data.map { it[Keys.ONBOARDING_COMPLETE] ?: false }
     val tutorialComplete: Flow<Boolean> = context.dataStore.data.map { it[Keys.TUTORIAL_COMPLETE] ?: false }
     val hexagonStyle: Flow<String> = context.dataStore.data.map { it[Keys.HEXAGON_STYLE] ?: "simple" }
@@ -160,6 +169,14 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
         context.dataStore.edit { it[Keys.ONBOARDING_COMPLETE] = complete }
     }
 
+    suspend fun getTutorialStep(): String? = context.dataStore.data.first()[Keys.TUTORIAL_STEP]
+
+    suspend fun setTutorialStep(step: String?) {
+        context.dataStore.edit {
+            if (step == null) it.remove(Keys.TUTORIAL_STEP) else it[Keys.TUTORIAL_STEP] = step
+        }
+    }
+
     override suspend fun isOnboardingComplete(): Boolean =
         context.dataStore.data.first()[Keys.ONBOARDING_COMPLETE] ?: false
 
@@ -179,6 +196,13 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
 
     override suspend fun setStatCurveVersion(version: Int) {
         context.dataStore.edit { it[Keys.STAT_CURVE_VERSION] = version }
+    }
+
+    suspend fun isAutoCategoriseEnabled(): Boolean =
+        context.dataStore.data.first()[Keys.AUTO_CATEGORISE] ?: true
+
+    suspend fun setAutoCategorise(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.AUTO_CATEGORISE] = enabled }
     }
 
     suspend fun setHexagonStyle(style: String) {

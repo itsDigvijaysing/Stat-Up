@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * A provider of one quote. Implementations must NEVER throw — network/parse failures come
+ * A provider of one quote. Implementations must NEVER throw - network/parse failures come
  * back as `Result.failure` so [QuoteRepository] can fall back to the bundled offline pack.
  */
 interface QuoteApi {
@@ -16,10 +16,10 @@ interface QuoteApi {
 }
 
 /**
- * Animechan v1 — `GET https://api.animechan.io/v1/quotes/random`.
+ * Animechan v1 - `GET https://api.animechan.io/v1/quotes/random`.
  *
  * Live-verified 2026-06-10. Free tier: **5 requests/hour** (exceeding it earns a 1-hour
- * block), which is why the repository caches the day's quote and never refetches — one
+ * block), which is why the repository caches the day's quote and never refetches - one
  * request per day per device stays far inside the limit.
  *
  * Response: `{"status":"success","data":{"content","anime":{"name"},"character":{"name"}}}`
@@ -58,14 +58,14 @@ class AnimechanApi(private val httpClient: HttpClient) : QuoteApi {
 }
 
 /**
- * ZenQuotes — `GET https://zenquotes.io/api/today` (the canonical quote-of-the-day).
+ * ZenQuotes - `GET https://zenquotes.io/api/today` (the canonical quote-of-the-day).
  *
  * Live-verified 2026-06-10. Free tier: 5 requests/30s, no key. ZenQuotes **requires a
- * visible attribution link** on the free tier — the returned [Quote.attribution] carries
+ * visible attribution link** on the free tier - the returned [Quote.attribution] carries
  * it and the UI renders it.
  *
  * Gotcha: when rate-limited ZenQuotes still answers HTTP 200 with a quote-shaped body
- * whose author is "zenquotes.io" ("Too many requests...") — that is treated as a failure
+ * whose author is "zenquotes.io" ("Too many requests...") - that is treated as a failure
  * so the rate-limit message is never shown as the day's wisdom.
  */
 class ZenQuotesApi(private val httpClient: HttpClient) : QuoteApi {

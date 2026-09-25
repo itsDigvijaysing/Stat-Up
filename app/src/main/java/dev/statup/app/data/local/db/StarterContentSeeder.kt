@@ -14,18 +14,20 @@ import dev.statup.app.domain.model.StatType
  * to do after onboarding. The ladder teaches the economy by itself.
  *
  * Gated on a DataStore flag rather than "is the table empty", because deleting the samples has
- * to be permanent — an emptiness check would resurrect them on the next launch.
+ * to be permanent - an emptiness check would resurrect them on the next launch.
  */
 object StarterContentSeeder {
 
     // One per stat, so the hexagon fills evenly and every stat has a worked example.
+    // Descriptions stay short and do NOT name the stat - the card already shows a stat chip,
+    // so repeating it just made every row longer than it needed to be.
     private val MISSIONS = listOf(
-        Mission("Workout", "Physical effort builds Strength", StatType.STR),
-        Mission("Study or Learn Something", "Learning and problem-solving build Intelligence", StatType.INT),
-        Mission("Book Reading", "Reflection and reading build Wisdom", StatType.WIS),
-        Mission("Practice a Skill", "Repetition and craft build Dexterity", StatType.DEX),
-        Mission("Talk to Someone", "Connecting with people builds Charisma", StatType.CHA),
-        Mission("7+ hrs Sleep & 2+ Meals", "Rest and nutrition build Vitality", StatType.VIT)
+        Mission("Workout", "Any real physical effort", StatType.STR),
+        Mission("Study or Learn Something", "Study or solve something", StatType.INT),
+        Mission("Book Reading", "Read or reflect", StatType.WIS),
+        Mission("Practice a Skill", "Drill a craft or skill", StatType.DEX),
+        Mission("Talk to Someone", "Reach out to someone", StatType.CHA),
+        Mission("7+ hrs Sleep & 2+ Meals", "Rest and eat properly", StatType.VIT)
     )
 
     private val REWARDS = listOf(
@@ -52,7 +54,7 @@ object StarterContentSeeder {
         userPreferences.setStarterContentSeeded(true)
     }
 
-    /** Unconditional seed — used after `clearAllTables()` during a full reset. */
+    /** Unconditional seed - used after `clearAllTables()` during a full reset. */
     suspend fun seed(database: AppDatabase, missionDao: MissionDao, rewardDao: RewardDao) {
         val now = System.currentTimeMillis()
         database.withTransaction {

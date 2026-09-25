@@ -14,6 +14,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import dev.statup.app.ai.classifier.StatSuggestion
 import dev.statup.app.ai.classifier.TaskClassifier
+import androidx.compose.runtime.collectAsState
+import dev.statup.app.data.local.datastore.UserPreferences
 import dev.statup.app.data.repository.PointsRepository
 import dev.statup.app.domain.model.StatType
 import dev.statup.app.ui.theme.AccentPrimary
@@ -28,18 +30,21 @@ import org.koin.compose.koinInject
  * Debounced offline guess at which stat [text] belongs to.
  *
  * Returns `null` while typing, when the text is too short to mean anything, and whenever the
- * model isn't confident — in which case the caller must keep whatever the picker already had.
+ * model isn't confident - in which case the caller must keep whatever the picker already had.
  * Scoring is sub-millisecond but the asset load on first use is not, so it runs off the main
  * thread.
  */
 @Composable
 fun rememberStatSuggestion(text: String): StatSuggestion? {
     val classifier = koinInject<TaskClassifier>()
+    val userPreferences = koinInject<UserPreferences>()
+    // Off means off: the classifier is never called, so its asset is never even loaded.
+    val enabled by userPreferences.autoCategorise.collectAsState(initial = true)
     var suggestion by remember { mutableStateOf<StatSuggestion?>(null) }
 
-    LaunchedEffect(text) {
+    LaunchedEffect(text, enabled) {
         val trimmed = text.trim()
-        if (trimmed.length < MIN_CHARS_TO_CLASSIFY) {
+        if (!enabled || trimmed.length < MIN_CHARS_TO_CLASSIFY) {
             suggestion = null
             return@LaunchedEffect
         }
@@ -75,7 +80,7 @@ fun StatPickerCaption(
     Column(modifier = modifier.fillMaxWidth()) {
         if (isSuggested) {
             Text(
-                text = "✨ Suggested — tap another to change",
+                text = "✨ Suggested - tap another to change",
                 color = AccentPrimary,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,

@@ -21,7 +21,7 @@ class StatsEngine {
         const val MOOD_POINTS = 2
 
         /**
-         * Map Todoist's API priority (1=normal … 4=urgent — inverted from the UI p1..p4
+         * Map Todoist's API priority (1=normal … 4=urgent - inverted from the UI p1..p4
          * scheme) to reward points. p1 urgent → 4 pts, p4 normal → 1 pt.
          */
         fun calculateTaskPoints(apiPriority: Int): Int = when (apiPriority) {
@@ -59,7 +59,7 @@ class StatsEngine {
 
         /**
          * Rebuild one stat from the lifetime points ever earned in it. Used by the one-time
-         * recompute after the conversion rate changed — equivalent to replaying every earn
+         * recompute after the conversion rate changed - equivalent to replaying every earn
          * through [applyPoints] from a fresh character.
          */
         fun statFromLifetimePoints(lifetimePoints: Int): StatProgress =

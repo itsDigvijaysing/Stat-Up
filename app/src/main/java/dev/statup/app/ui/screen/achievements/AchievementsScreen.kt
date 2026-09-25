@@ -1,8 +1,14 @@
 package dev.statup.app.ui.screen.achievements
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -65,7 +71,22 @@ fun AchievementsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f)
         ) {
-            val (completed, inProgress) = uiState.achievements.partition { it.isUnlocked }
+            // A just-earned achievement jumps to the very top while its glow lasts, so an
+            // unlock is actually seen - the list is long and "in progress first" otherwise
+            // buries the thing that just happened below a screenful of locked rows.
+            val now = System.currentTimeMillis()
+            val (fresh, settled) = uiState.achievements.partition { a ->
+                a.isUnlocked && a.unlockedAt?.let { now - it < FRESH_UNLOCK_WINDOW_MS } == true
+            }
+            val (completed, inProgress) = settled.partition { it.isUnlocked }
+
+            items(fresh, key = { it.id }) { achievement ->
+                AchievementCard(
+                    achievement = achievement,
+                    onDelete = { viewModel.deleteAchievement(achievement) },
+                    onComplete = { viewModel.completeAchievement(achievement) }
+                )
+            }
 
             items(inProgress, key = { it.id }) { achievement ->
                 AchievementCard(
@@ -105,7 +126,7 @@ fun AchievementsScreen(
     }
 }
 
-/** Ceiling for a user-set achievement reward — these complete on a tap, so keep it a goal. */
+/** Ceiling for a user-set achievement reward - these complete on a tap, so keep it a goal. */
 private const val MAX_CUSTOM_REWARD = 500
 
 @Composable
@@ -214,10 +235,32 @@ private fun AchievementCard(
 
     val rewardPoints = achievement.displayRewardPoints
 
+    // A just-earned achievement glows for a minute so the unlock is actually noticed -
+    // the list is long and an unlock was otherwise indistinguishable from an old one.
+    val isFresh = achievement.isUnlocked && achievement.unlockedAt?.let {
+        System.currentTimeMillis() - it < FRESH_UNLOCK_WINDOW_MS
+    } == true
+    val freshPulse = rememberInfiniteTransition(label = "freshUnlock")
+    val glow by freshPulse.animateFloat(
+        initialValue = 0.20f,
+        targetValue = 0.75f,
+        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse),
+        label = "freshGlow"
+    )
+
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(alpha)
+            .then(
+                if (isFresh) {
+                    Modifier.border(
+                        width = 2.dp,
+                        color = PointsGold.copy(alpha = glow),
+                        shape = RoundedCornerShape(GlassTokens.CardRadius)
+                    )
+                } else Modifier
+            )
     ) {
         Row(
             modifier = Modifier
@@ -533,3 +576,6 @@ private fun CreateAchievementDialog(
         }
     }
 }
+
+/** How long a newly unlocked achievement keeps its glow. */
+private const val FRESH_UNLOCK_WINDOW_MS = 60_000L

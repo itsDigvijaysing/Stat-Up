@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Stat Up widget — 4x2 read-only.
+    Stat Up widget - 4x2 read-only.
 
     RemoteViews limitations:
       - Only a fixed set of widgets allowed (LinearLayout/FrameLayout/TextView/ImageView/etc.).
       - No custom views, no Compose.
       - No selectors/dynamic theming pre-API 31; we use a static dark palette that matches the app.
-    Click target is the whole root — opens MainActivity.
+    Click target is the whole root - opens MainActivity.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"

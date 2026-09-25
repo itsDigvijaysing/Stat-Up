@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,8 +43,8 @@ import org.koin.androidx.compose.koinViewModel
  * Prominent disclosure for the AI Coach, shown in the connect dialog directly above the API-key
  * field so the user reads it before the affirmative action that enables sharing.
  *
- * Google Play's User Data policy requires an in-app disclosure — not a buried settings page or a
- * privacy-policy-only mention — whenever an app sends user data somewhere the user would not
+ * Google Play's User Data policy requires an in-app disclosure - not a buried settings page or a
+ * privacy-policy-only mention - whenever an app sends user data somewhere the user would not
  * otherwise expect. Sending player state to Google's servers from an app advertised as
  * offline-first is exactly that case.
  */
@@ -74,8 +75,8 @@ private fun DataSharingDisclosure() {
         Text(
             text = "Connecting the AI Coach turns off offline-only mode for this feature. " +
                 "Each time you send a message, your message and a snapshot of your player " +
-                "state — name, rank, work days, streak, six stat values and their average, total " +
-                "points, last 5 earns and up to 4 active missions — are sent over HTTPS to " +
+                "state - name, rank, work days, streak, six stat values and their average, total " +
+                "points, last 5 earns and up to 4 active missions - are sent over HTTPS to " +
                 "Google's Gemini API so the " +
                 "reply can reference your progress.\n\n" +
                 "Nothing is sent until you send a message, and disconnecting stops it " +
@@ -212,10 +213,14 @@ fun SettingsScreen(
         // Preferences Section
         // Offline re-categorisation of completed tasks that never got a stat. Sits with the
         // task integrations because that is where uncategorised history comes from.
+        // One card, one concern. The toggle and the manual pass used to be two stacked
+        // cards for the same feature, which read as two unrelated settings.
         SettingsSection(title = "Task Categories") {
-            AssignCategoriesCard(
+            TaskCategoriesCard(
+                enabled = uiState.autoCategorise,
                 uncategorised = uiState.uncategorisedTasks,
                 state = uiState.backfill,
+                onToggle = { viewModel.updateAutoCategorise(it) },
                 onRun = { viewModel.assignMissingCategories() },
                 onDismiss = { viewModel.dismissBackfillResult() }
             )
@@ -224,106 +229,35 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         SettingsSection(title = "Preferences") {
-            // Hexagon Style Selector
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column {
-                    Text(
-                        text = "Hexagon Style",
-                        color = TextPrimary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = Inter
-                    )
-                    Text(
-                        text = "Choose the visual style for your stats hexagon",
-                        color = TextSecondary,
-                        fontSize = 12.sp,
-                        fontFamily = Inter
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        HexagonStyleOption(
-                            title = "Simple",
-                            description = "Clean overlay",
-                            selected = uiState.hexagonStyle == "simple",
-                            onClick = { viewModel.updateHexagonStyle("simple") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        HexagonStyleOption(
-                            title = "Glow",
-                            description = "RPG aura",
-                            selected = uiState.hexagonStyle == "glow",
-                            onClick = { viewModel.updateHexagonStyle("glow") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
+            // Both of these used to be grids of title+description cards - two rows of them
+            // for the quote source - which cost most of a screen for two rarely-touched
+            // settings. Chips carry the same choice in one line, with the description shown
+            // only for whatever is currently selected.
+            CompactChoice(
+                title = "Hexagon Style",
+                options = listOf(
+                    ChoiceOption("simple", "Simple", "Clean overlay"),
+                    ChoiceOption("glow", "Glow", "RPG aura")
+                ),
+                selectedValue = uiState.hexagonStyle,
+                onSelect = { viewModel.updateHexagonStyle(it) }
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Daily Quote source. OFFLINE (bundled pack, zero network) is the default to
-            // keep the offline-first stance; online sources are an explicit opt-in here.
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column {
-                    Text(
-                        text = "Daily Quote",
-                        color = TextPrimary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = Inter
-                    )
-                    Text(
-                        text = "Where your quote of the day comes from",
-                        color = TextSecondary,
-                        fontSize = 12.sp,
-                        fontFamily = Inter
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        HexagonStyleOption(
-                            title = "Offline",
-                            description = "Bundled pack",
-                            selected = uiState.quoteSource == "OFFLINE",
-                            onClick = { viewModel.updateQuoteSource("OFFLINE") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        HexagonStyleOption(
-                            title = "Anime",
-                            description = "Animechan",
-                            selected = uiState.quoteSource == "ANIME",
-                            onClick = { viewModel.updateQuoteSource("ANIME") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        HexagonStyleOption(
-                            title = "Motivation",
-                            description = "ZenQuotes",
-                            selected = uiState.quoteSource == "MOTIVATION",
-                            onClick = { viewModel.updateQuoteSource("MOTIVATION") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        HexagonStyleOption(
-                            title = "Mixed",
-                            description = "Alternate daily",
-                            selected = uiState.quoteSource == "MIXED",
-                            onClick = { viewModel.updateQuoteSource("MIXED") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
+            // OFFLINE (bundled pack, zero network) is the default, to keep the offline-first
+            // stance; the online sources are an explicit opt-in.
+            CompactChoice(
+                title = "Daily Quote",
+                options = listOf(
+                    ChoiceOption("OFFLINE", "Offline", "Bundled pack, no network"),
+                    ChoiceOption("ANIME", "Anime", "Animechan"),
+                    ChoiceOption("MOTIVATION", "Motivation", "ZenQuotes"),
+                    ChoiceOption("MIXED", "Mixed", "Alternates daily")
+                ),
+                selectedValue = uiState.quoteSource,
+                onSelect = { viewModel.updateQuoteSource(it) }
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -369,7 +303,7 @@ fun SettingsScreen(
                             fontFamily = Inter
                         )
                         Text(
-                            text = "Points, stats, work days and ranks — in plain English",
+                            text = "Points, stats, work days and ranks",
                             color = TextSecondary,
                             fontSize = 12.sp,
                             fontFamily = Inter
@@ -1101,108 +1035,193 @@ private fun ResetConfirmationDialog(
 }
 
 /**
- * "Assign missing categories" — runs the offline classifier over completed tasks that have no
- * stat, showing live progress. Disabled when there is nothing to do, so the row doubles as a
- * status readout.
+ * Everything about automatic stat categories in a single card: the switch that governs
+ * whether the on-device model runs at all, and - only when there is work to do - the action
+ * that applies it to history. Splitting these into two cards implied two separate features.
  */
 @Composable
-private fun AssignCategoriesCard(
+private fun TaskCategoriesCard(
+    enabled: Boolean,
     uncategorised: Int,
     state: BackfillUiState,
+    onToggle: (Boolean) -> Unit,
     onRun: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val running = state is BackfillUiState.Running
-    val clickable = !running && uncategorised > 0
 
-    GlassCard(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = if (clickable) onRun else null
-    ) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "🏷️", fontSize = 24.sp)
-                Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Assign missing categories",
-                        color = if (clickable) TextPrimary else TextSecondary,
+                        text = "Suggest categories automatically",
+                        color = TextPrimary,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = Inter
                     )
                     Text(
-                        text = when {
-                            running -> "Working…"
-                            uncategorised > 0 ->
-                                "$uncategorised completed task${if (uncategorised == 1) "" else "s"} have no stat yet"
-                            else -> "Every completed task already has a stat"
-                        },
+                        text = "Guesses which stat a task trains, on your device. " +
+                            "Nothing is sent anywhere.",
                         color = TextSecondary,
                         fontSize = 12.sp,
                         fontFamily = Inter
                     )
                 }
-                if (running) {
-                    CircularProgressIndicator(
-                        color = AccentPrimary,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(20.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = onToggle,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = AccentPrimary,
+                        checkedTrackColor = AccentPrimary.copy(alpha = 0.3f),
+                        uncheckedThumbColor = TextTertiary,
+                        uncheckedTrackColor = GlassFill
                     )
-                }
+                )
             }
 
-            when (state) {
-                is BackfillUiState.Running -> {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    val progress = if (state.total > 0) state.done.toFloat() / state.total else 0f
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        color = AccentPrimary,
-                        trackColor = GlassFill,
-                        modifier = Modifier.fillMaxWidth().height(4.dp)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Categorising… ${state.done} / ${state.total}",
-                        color = TextTertiary,
-                        fontSize = 11.sp,
-                        fontFamily = Inter
-                    )
+            // The manual pass only exists while there is history to fix, so it stays hidden
+            // rather than sitting there permanently disabled.
+            if (enabled && (uncategorised > 0 || state !is BackfillUiState.Idle)) {
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = GlassBorder.copy(alpha = 0.4f))
+                Spacer(modifier = Modifier.height(14.dp))
+
+                when (state) {
+                    is BackfillUiState.Running -> {
+                        val progress = if (state.total > 0) state.done.toFloat() / state.total else 0f
+                        Text(
+                            text = "Categorising… ${state.done} / ${state.total}",
+                            color = TextSecondary,
+                            fontSize = 13.sp,
+                            fontFamily = Inter
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            color = AccentPrimary,
+                            trackColor = GlassFill,
+                            modifier = Modifier.fillMaxWidth().height(4.dp)
+                        )
+                    }
+                    is BackfillUiState.Finished -> {
+                        Text(
+                            text = if (state.categorised > 0) {
+                                "${state.categorised} of ${state.scanned} categorised. The rest " +
+                                    "were too unclear to guess - set those by hand."
+                            } else {
+                                "Couldn't confidently categorise any of the ${state.scanned} " +
+                                    "remaining tasks. Set those by hand."
+                            },
+                            color = PointsGold,
+                            fontSize = 12.sp,
+                            fontFamily = Inter
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        GlassButton(text = "OK", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
+                    }
+                    is BackfillUiState.Failed -> {
+                        Text(
+                            text = state.message,
+                            color = AccentError,
+                            fontSize = 12.sp,
+                            fontFamily = Inter
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        GlassButton(text = "OK", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
+                    }
+                    BackfillUiState.Idle -> {
+                        Text(
+                            text = "$uncategorised completed task${if (uncategorised == 1) "" else "s"} " +
+                                "finished before this existed and still have no stat.",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            fontFamily = Inter
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        GlassButton(
+                            text = "Categorise them",
+                            onClick = onRun,
+                            enabled = !running,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
-                is BackfillUiState.Finished -> {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = if (state.categorised > 0) {
-                            "${state.categorised} of ${state.scanned} task" +
-                                "${if (state.scanned == 1) "" else "s"} categorised. " +
-                                "The rest were too unclear to guess — set those by hand."
-                        } else {
-                            "Couldn't confidently categorise any of the ${state.scanned} " +
-                                "remaining tasks. Set those by hand."
-                        },
-                        color = PointsGold,
-                        fontSize = 12.sp,
-                        fontFamily = Inter
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    GlassButton(text = "OK", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
+            }
+        }
+    }
+}
+
+/** One choice in a [CompactChoice]: the stored value, its chip label, and a one-line hint. */
+private data class ChoiceOption(val value: String, val label: String, val hint: String)
+
+/**
+ * A compact single-select: a title, a wrapped row of chips, and the selected option's hint.
+ *
+ * Replaces the card grids that previously rendered every option's title AND description at
+ * full width - four options meant two rows of tall cards for a setting most users touch once.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CompactChoice(
+    title: String,
+    options: List<ChoiceOption>,
+    selectedValue: String,
+    onSelect: (String) -> Unit
+) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = Inter
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                options.forEach { option ->
+                    val selected = option.value == selectedValue
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                if (selected) AccentPrimary.copy(alpha = 0.22f) else GlassFill
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (selected) AccentPrimary.copy(alpha = 0.6f) else GlassBorder,
+                                shape = RoundedCornerShape(20.dp)
+                            )
+                            .clickable { onSelect(option.value) }
+                            .padding(horizontal = 16.dp, vertical = 9.dp)
+                    ) {
+                        Text(
+                            text = option.label,
+                            color = if (selected) TextPrimary else TextSecondary,
+                            fontSize = 13.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                            fontFamily = Inter
+                        )
+                    }
                 }
-                is BackfillUiState.Failed -> {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = state.message,
-                        color = AccentError,
-                        fontSize = 12.sp,
-                        fontFamily = Inter
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    GlassButton(text = "OK", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
-                }
-                BackfillUiState.Idle -> Unit
+            }
+            options.firstOrNull { it.value == selectedValue }?.let { current ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = current.hint,
+                    color = TextTertiary,
+                    fontSize = 12.sp,
+                    fontFamily = Inter
+                )
             }
         }
     }

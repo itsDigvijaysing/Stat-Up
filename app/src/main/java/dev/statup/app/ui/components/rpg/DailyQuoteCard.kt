@@ -22,10 +22,10 @@ import dev.statup.app.ui.theme.TextTertiary
 
 /**
  * The day's quote, rendered as a glass card under the status window. Renders nothing
- * while the quote is still resolving (no skeleton needed — resolution is instant for the
+ * while the quote is still resolving (no skeleton needed - resolution is instant for the
  * offline pack and one small request for online sources).
  *
- * When [Quote.attribution] is present it is rendered in the footer — ZenQuotes' free tier
+ * When [Quote.attribution] is present it is rendered in the footer - ZenQuotes' free tier
  * REQUIRES visible attribution, so never strip that line.
  */
 @Composable
@@ -46,7 +46,7 @@ fun DailyQuoteCard(quote: Quote?, modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(8.dp))
 
             val signature = buildString {
-                append("— ").append(quote.author)
+                append("- ").append(quote.author)
                 quote.origin?.let { append(" · ").append(it) }
             }
             Text(

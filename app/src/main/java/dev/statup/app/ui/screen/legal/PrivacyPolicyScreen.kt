@@ -112,7 +112,7 @@ fun PrivacyPolicyScreen(navController: NavController) {
 
 private const val POLICY_ASSET = "privacy_policy.md"
 
-/** Shown only if the asset is somehow missing — the policy must never render as a blank page. */
+/** Shown only if the asset is somehow missing - the policy must never render as a blank page. */
 private const val FALLBACK_TEXT = """
 # Privacy Policy
 

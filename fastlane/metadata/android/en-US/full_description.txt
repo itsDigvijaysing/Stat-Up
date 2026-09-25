@@ -5,27 +5,27 @@ Stat Up isn't just a to-do app. It turns real-life productivity into character p
 Do tasks, earn points, improve your stats, hold your streak, climb the ranks, and spend what you earn on rewards you set yourself. Everything runs on your device.
 
 FEATURES:
-• RPG stats system — Strength, Intelligence, Wisdom, Dexterity, Charisma, Vitality
+• RPG stats system - Strength, Intelligence, Wisdom, Dexterity, Charisma, Vitality
 • Hexagon radar chart with tap-to-expand stat details
-• Rank system — progress from E → S based on streak consistency
+• Rank system - progress from E → S based on streak consistency
 • Create custom tasks with priority and stat assignment
 • Custom rewards to redeem with earned points
 • Achievement system with built-in and custom achievements
 • Streak calendar with month navigation
-• Home-screen widget — rank, balance, streak, and today's earned points at a glance
+• Home-screen widget - rank, balance, streak, and today's earned points at a glance
 • Real GPU backdrop blur on Android 12+ (auto-falls-back on older devices)
 • No ads, no tracking, no built-in data collection
 
 OPTIONAL INTEGRATIONS (your data stays yours, opt-in only):
-• Todoist — connect your account to earn points for completing tasks; supports label-to-stat routing
-• AI Coach — bring your own Google Gemini API key for a private chat coach that talks to you about your stats and progress (chat history is not stored)
+• Todoist - connect your account to earn points for completing tasks; supports label-to-stat routing
+• AI Coach - bring your own Google Gemini API key for a private chat coach that talks to you about your stats and progress (chat history is not stored)
 
 PRIVACY:
-• Offline-first core — stats, tasks, rewards, achievements, history, and mood check-ins never leave your device
+• Offline-first core - stats, tasks, rewards, achievements, history, and mood check-ins never leave your device
 • Local-only storage by default; Todoist and Gemini run only if you provide your own credentials
 • API tokens and keys stored encrypted on-device (AES-256-GCM)
 • No analytics, crash reporting, advertising IDs, or third-party tracking
-• Open source — review the code yourself
+• Open source - review the code yourself
 
 PERFECT FOR:
 • Personal motivation and goal tracking

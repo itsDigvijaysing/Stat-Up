@@ -72,7 +72,7 @@ class HistoryViewModel(
     }
 
     /**
-     * Streaks come from player_stats — the same counter the Status screen and the widget show,
+     * Streaks come from player_stats - the same counter the Status screen and the widget show,
      * and the one DecayEngine uses to drive rank. This screen used to re-derive its own from
      * the transaction log, which disagreed on day one and after a Streak Shield absorbed an
      * idle day. One source, three surfaces.
@@ -137,7 +137,7 @@ class HistoryViewModel(
         viewModelScope.launch {
             transactions.collect { txns ->
                 // Heavy, user-state-INDEPENDENT aggregation (sort, sums, streak walk) is O(N)
-                // over the full history — offload to the compute dispatcher to avoid dropping
+                // over the full history - offload to the compute dispatcher to avoid dropping
                 // frames on large histories.
                 val computed = withContext(computeDispatcher) {
                     val sorted = txns.sortedByDescending { it.createdAt }

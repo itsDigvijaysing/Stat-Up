@@ -94,7 +94,7 @@ fun TasksScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Tasks & Missions",
+                    text = "Tasks",
                     color = TextPrimary,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
@@ -181,7 +181,7 @@ private fun TasksList(
             contentPadding = PaddingValues(bottom = 100.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            // 1. Active missions first — the primary surface
+            // 1. Active missions first - the primary surface
             if (activeMissions.isNotEmpty()) {
                 item {
                     Text(
@@ -230,7 +230,7 @@ private fun TasksList(
                 }
             }
 
-            // 4. Todoist section — at the bottom, collapsed by default
+            // 4. Todoist section - at the bottom, collapsed by default
             if (uiState.todoistConnected) {
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -267,7 +267,7 @@ private fun TodoistSection(
 ) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Header — tap to expand/collapse
+            // Header - tap to expand/collapse
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -560,7 +560,7 @@ private fun CreateMissionDialog(
     var isDaily by remember { mutableStateOf(true) }
 
     // The picker used to open hardcoded on STR regardless of the task. It now starts on the
-    // user's default stat and moves to the classifier's guess until they pick one themselves —
+    // user's default stat and moves to the classifier's guess until they pick one themselves -
     // after which their choice is never overridden.
     val defaultStat = rememberDefaultStat()
     var pickedStat by remember { mutableStateOf<StatType?>(null) }
@@ -857,7 +857,7 @@ private val TASKS_HELP = listOf(
 @Composable
 private fun TasksHelpDialog(onDismiss: () -> Unit) {
     HelpDialog(
-        title = "Tasks & Missions",
+        title = "Tasks",
         intro = "Missions are the things you want to do. Finishing them earns points, and points grow your stats.",
         points = TASKS_HELP,
         onDismiss = onDismiss

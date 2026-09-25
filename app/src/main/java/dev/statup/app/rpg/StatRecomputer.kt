@@ -19,7 +19,7 @@ interface LifetimeStatPointsSource {
  *
  * Reads `transactions` and writes only the singleton `player_stats` row: transactions,
  * balance, redemptions and achievements are never touched. `decay_log` is deliberately
- * ignored — the old all-six-stats decay is the bug being fixed and its record is incomplete.
+ * ignored - the old all-six-stats decay is the bug being fixed and its record is incomplete.
  *
  * Rank is re-derived from the rebuilt stats plus the banked Work Days, and because
  * [RankLogic.rankFor] is a lookup it can move the player several ranks at once.

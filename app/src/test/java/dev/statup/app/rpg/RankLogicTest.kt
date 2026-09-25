@@ -11,12 +11,12 @@ import org.junit.Test
  *
  * Contract:
  *   - Active day: Work Days +1. Idle day: -1, floored at 0.
- *   - Work Days are NEVER reset — promotion keeps the banked total.
+ *   - Work Days are NEVER reset - promotion keeps the banked total.
  *   - Promotion needs days AND average stat. Demotion looks at days only.
  */
 class RankLogicTest {
 
-    @Test fun `promotion needs both requirements — days alone is not enough`() {
+    @Test fun `promotion needs both requirements - days alone is not enough`() {
         // D needs 7 days and avg stat 6. Six days banked, seventh day earned, but stats are
         // still at base 5.
         val t = RankLogic.applyActiveDay(workDays = 6, currentRank = Rank.E, averageStat = 5f)
@@ -24,7 +24,7 @@ class RankLogicTest {
         assertEquals(7, t.workDays)
     }
 
-    @Test fun `promotion needs both requirements — stats alone is not enough`() {
+    @Test fun `promotion needs both requirements - stats alone is not enough`() {
         val t = RankLogic.applyActiveDay(workDays = 2, currentRank = Rank.E, averageStat = 40f)
         assertTrue("days below the gate must block promotion", t is RankLogic.Transition.DaysUpdated)
         assertEquals(3, t.workDays)
@@ -37,13 +37,13 @@ class RankLogicTest {
         assertEquals(7, t.workDays)
     }
 
-    @Test fun `work days survive promotion — no reset at the new rank`() {
+    @Test fun `work days survive promotion - no reset at the new rank`() {
         // This is the whole point of the model: the day-after-promotion cliff is gone.
         val promoted = RankLogic.applyActiveDay(14, Rank.D, averageStat = 14f)
         assertTrue(promoted is RankLogic.Transition.RankUp)
         assertEquals("banked days carry over", 15, promoted.workDays)
 
-        // One idle day right after promoting is survivable: 14 >= C's 15? No — but it is well
+        // One idle day right after promoting is survivable: 14 >= C's 15? No - but it is well
         // above D's 7, so the fall is at most to D, not a cliff to the floor.
         val idle = RankLogic.applyIdleDay(promoted.workDays, Rank.C)
         assertEquals(14, idle.workDays)
@@ -62,7 +62,7 @@ class RankLogicTest {
         assertEquals(30, days)
     }
 
-    @Test fun `losing stats never demotes — only days do`() {
+    @Test fun `losing stats never demotes - only days do`() {
         // Sitting at A (60 days) with an average stat far below A's gate of 36.
         val t = RankLogic.applyIdleDay(workDays = 100, currentRank = Rank.A)
         assertTrue("stats are not consulted on the idle path", t is RankLogic.Transition.DaysUpdated)
@@ -147,7 +147,7 @@ class RankLogicTest {
         assertEquals(0, RankLogic.reconstructWorkDays(emptySet(), LocalDate.now()))
     }
 
-    @Test fun `today is not counted — tonight's tick will judge it`() {
+    @Test fun `today is not counted - tonight's tick will judge it`() {
         val today = LocalDate.now()
         assertEquals(0, RankLogic.reconstructWorkDays(setOf(today), today.minusDays(1)))
     }

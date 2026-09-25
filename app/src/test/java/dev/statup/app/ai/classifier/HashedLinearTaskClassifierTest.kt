@@ -13,12 +13,12 @@ import java.io.File
  *
  * The expected probabilities were produced by `scripts/train_stat_classifier.py`'s own
  * `featurise()`/`softmax()` running on the **committed** blob with its int8 weights
- * dequantised — i.e. exactly the arithmetic the app performs. Any drift in tokenisation,
+ * dequantised - i.e. exactly the arithmetic the app performs. Any drift in tokenisation,
  * n-gram ranges, hashing, weighting or normalisation moves these numbers well outside the
  * tolerance, which is the whole point: a silent featurisation mismatch scores garbage while
  * still looking like a working classifier.
  *
- * Two fixtures are deliberate model misses and three sit below the confidence threshold —
+ * Two fixtures are deliberate model misses and three sit below the confidence threshold -
  * this asserts model OUTPUT, never model correctness.
  */
 class HashedLinearTaskClassifierTest {
@@ -103,9 +103,9 @@ class HashedLinearTaskClassifierTest {
     @Test
     fun `low confidence returns null at the shipped threshold`() {
         val gated = HashedLinearTaskClassifier({ modelFile.readBytes() })
-        // Python confidence 0.4476 — under the 0.55 bar, so the app must stay silent.
+        // Python confidence 0.4476 - under the 0.55 bar, so the app must stay silent.
         assertNull(gated.classify("Track the pf withdrawal request"))
-        // Python confidence 0.9805 — comfortably over it.
+        // Python confidence 0.9805 - comfortably over it.
         assertNotNull(gated.classify("Read the GIS spatial analysis guide"))
     }
 

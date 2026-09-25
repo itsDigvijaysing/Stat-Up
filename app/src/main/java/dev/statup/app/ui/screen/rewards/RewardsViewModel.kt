@@ -12,7 +12,8 @@ import kotlinx.coroutines.launch
 class RewardsViewModel(
     private val rewardRepository: RewardRepository,
     private val pointsRepository: PointsRepository,
-    private val achievementTracker: AchievementTracker
+    private val achievementTracker: AchievementTracker,
+    private val tutorialCoordinator: dev.statup.app.ui.screen.tutorial.TutorialCoordinator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RewardsUiState())
@@ -79,6 +80,8 @@ class RewardsViewModel(
             val result = rewardRepository.redeemReward(reward)
             result.onSuccess {
                 achievementTracker.onRewardRedeemed()
+                // Closes the guided first run once the loop has been completed for real.
+                tutorialCoordinator.onRewardRedeemed()
                 _uiState.update {
                     it.copy(redeemSuccess = RedeemSuccess(++redeemEventId, reward.name))
                 }

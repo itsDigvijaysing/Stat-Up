@@ -43,7 +43,7 @@ fun RewardsScreen(
 ) {
     var showHelp by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
-    // Confirmation gates: redeeming spends points and deleting is permanent — both used to fire
+    // Confirmation gates: redeeming spends points and deleting is permanent - both used to fire
     // on a single tap of buttons that sit close together in a scrolling list.
     var pendingRedeem by remember { mutableStateOf<Reward?>(null) }
     var pendingDelete by remember { mutableStateOf<Reward?>(null) }
@@ -89,7 +89,7 @@ fun RewardsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Balance Header — tap to view history
+            // Balance Header - tap to view history
             GlassCardWithHighlight(
                 modifier = Modifier.fillMaxWidth(),
                 elevated = true,
@@ -157,7 +157,7 @@ fun RewardsScreen(
             )
         }
 
-        // Edit Dialog — same form, pre-filled, routes to editReward (preserves id/redemptions).
+        // Edit Dialog - same form, pre-filled, routes to editReward (preserves id/redemptions).
         pendingEdit?.let { reward ->
             CreateRewardDialog(
                 existing = reward,
@@ -169,7 +169,7 @@ fun RewardsScreen(
             )
         }
 
-        // Redeem confirmation — spending points is irreversible.
+        // Redeem confirmation - spending points is irreversible.
         pendingRedeem?.let { reward ->
             ConfirmActionDialog(
                 title = "Redeem Reward",
@@ -184,7 +184,7 @@ fun RewardsScreen(
             )
         }
 
-        // Delete confirmation — deletion is permanent.
+        // Delete confirmation - deletion is permanent.
         pendingDelete?.let { reward ->
             ConfirmActionDialog(
                 title = "Delete Reward",
@@ -199,7 +199,7 @@ fun RewardsScreen(
             )
         }
 
-        // Success snackbar — keyed on the event id (not the reward name) so redeeming the
+        // Success snackbar - keyed on the event id (not the reward name) so redeeming the
         // same reward twice in quick succession restarts the auto-dismiss timer.
         uiState.redeemSuccess?.let { success ->
             LaunchedEffect(success.id) {
@@ -328,7 +328,7 @@ private fun RewardCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 // 48dp touch targets (Core App Quality Touch_Target_Size / Material a11y
-                // minimum). The glyphs stay small so the card's visual weight is unchanged —
+                // minimum). The glyphs stay small so the card's visual weight is unchanged -
                 // only the tappable area grows. Do NOT shrink these back with Modifier.size().
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
@@ -531,7 +531,7 @@ private fun CreateRewardDialog(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Cost selector — presets + custom input
+                    // Cost selector - presets + custom input
                     Text(
                         text = "Cost (points):",
                         color = TextSecondary,
@@ -566,7 +566,7 @@ private fun CreateRewardDialog(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Custom cost input — overrides presets when filled
+                    // Custom cost input - overrides presets when filled
                     GlassTextField(
                         value = customCost,
                         onValueChange = { input ->

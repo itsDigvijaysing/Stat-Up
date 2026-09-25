@@ -50,7 +50,7 @@ class PointsRepository(
     override suspend fun assignStat(id: Long, stat: StatType): Boolean =
         transactionDao.assignStatTypeIfMissing(id, stat.name) > 0
 
-    /** Live count of earns still missing a stat — drives the Settings row's subtitle. */
+    /** Live count of earns still missing a stat - drives the Settings row's subtitle. */
     val uncategorisedCount: Flow<Int> = transactionDao.countUncategorisedEarns()
 
     /**
@@ -102,7 +102,7 @@ class PointsRepository(
     }
 
     /**
-     * Idempotent earn keyed by [externalId] — used by Todoist sync. Returns the new
+     * Idempotent earn keyed by [externalId] - used by Todoist sync. Returns the new
      * transaction on first call, or null if a transaction with the same externalId
      * already exists (race winner / prior sync run). The unique index on
      * `transactions.externalId` plus `OnConflictStrategy.IGNORE` makes the check race-safe
@@ -159,7 +159,7 @@ class PointsRepository(
     /**
      * Buy one Streak Freeze Shield for [PlayerStats.SHIELD_COST] points. Balance check,
      * REDEEM insert, and shield increment run in a single Room transaction (balance is
-     * re-read live inside it — same pattern as RewardRepository.redeemReward), so a
+     * re-read live inside it - same pattern as RewardRepository.redeemReward), so a
      * concurrent redemption can't drive the balance negative. Returns the new shield
      * count, or fails with [InsufficientPointsException] / max-shields.
      */

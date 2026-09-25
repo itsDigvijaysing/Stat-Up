@@ -63,7 +63,7 @@ val appModule = module {
     single { get<AppDatabase>().aiMemoryDao() }
 
     // Wraps Room's withTransaction so engines (e.g. DecayEngine) can run a read-modify-write
-    // atomically without depending on the concrete AppDatabase — keeps them JVM-unit-testable.
+    // atomically without depending on the concrete AppDatabase - keeps them JVM-unit-testable.
     single<Transactor> { RoomTransactor(get()) }
 
     // DataStore
@@ -72,7 +72,7 @@ val appModule = module {
     // Notifications
     single { Notifier(androidContext()) }
 
-    // Home-screen widget refresher — pushes APPWIDGET_UPDATE broadcasts when data changes.
+    // Home-screen widget refresher - pushes APPWIDGET_UPDATE broadcasts when data changes.
     single { StatsWidgetUpdater(androidContext()) }
 
     // HTTP Client
@@ -105,7 +105,7 @@ val appModule = module {
     single { TodoistApi(get()) }
     single { TodoistSyncManager(get(), get(), get(), get(), get()) }
 
-    // Daily Quote — UserPreferences implements the DailyQuoteStore slice.
+    // Daily Quote - UserPreferences implements the DailyQuoteStore slice.
     single<QuotePack> { OfflineQuotePack(androidContext()) }
     single {
         QuoteRepository(
@@ -118,7 +118,7 @@ val appModule = module {
 
     // AI Agent (Gemini)
     // GeminiAgentApi resolves the API key on-demand via a suspending lambda so it always
-    // reads the latest value from encrypted storage — no need to recreate the singleton when
+    // reads the latest value from encrypted storage - no need to recreate the singleton when
     // the user updates their key in Settings.
     single<AgentApi> {
         val userPreferences = get<dev.statup.app.data.local.datastore.UserPreferences>()
@@ -193,12 +193,13 @@ val appModule = module {
         )
     }
     single { StatUpgradeRunner(get<UserPreferences>(), get(), get()) }
+    single { dev.statup.app.ui.screen.tutorial.TutorialCoordinator(get(), get()) }
 
     // ViewModels
     viewModel { StatusViewModel(get(), get(), get(), get(), get(), get(), get()) }
-    viewModel { RewardsViewModel(get(), get(), get()) }
+    viewModel { RewardsViewModel(get(), get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
-    viewModel { TasksViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { TasksViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel {
         HistoryViewModel(
             transactions = get<PointsRepository>().transactions,
@@ -209,5 +210,4 @@ val appModule = module {
     viewModel { StatsViewModel(get(), get()) }
     viewModel { AgentViewModel(get(), get()) }
     viewModel { OnboardingViewModel(get(), get()) }
-    viewModel { dev.statup.app.ui.screen.tutorial.TutorialViewModel(get(), get(), get(), get()) }
 }

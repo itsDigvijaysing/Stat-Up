@@ -8,7 +8,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Drives the first-run onboarding. Completing it persists the chosen name (if any) and flips the
- * `onboardingComplete` flag — which AppNavigation observes to swap from the onboarding screen to
+ * `onboardingComplete` flag - which AppNavigation observes to swap from the onboarding screen to
  * the main shell.
  */
 class OnboardingViewModel(

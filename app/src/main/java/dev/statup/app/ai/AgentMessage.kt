@@ -3,12 +3,12 @@ package dev.statup.app.ai
 import java.util.UUID
 
 /**
- * In-memory chat message. Ephemeral — never written to the DB (the user opted out of
+ * In-memory chat message. Ephemeral - never written to the DB (the user opted out of
  * conversation persistence). The [role] follows Gemini's vocabulary: "user" for the
  * human, "model" for the assistant.
  *
  * [id] is a process-unique UUID used as the stable LazyColumn key. Do NOT key by
- * [createdAt] — two messages enqueued in the same millisecond will collide and crash
+ * [createdAt] - two messages enqueued in the same millisecond will collide and crash
  * Compose with "Key X was already used".
  */
 data class AgentMessage(

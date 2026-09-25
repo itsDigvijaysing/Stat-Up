@@ -119,7 +119,7 @@ android {
 // Google Play's User Data policy requires the privacy policy to be reachable from INSIDE the
 // app, not just from the store listing. PRIVACY_POLICY.md at the repo root is the single
 // source of truth; this task copies it into assets so PrivacyPolicyScreen can render it
-// offline. The asset is generated (gitignored) — never edit it by hand.
+// offline. The asset is generated (gitignored) - never edit it by hand.
 def privacyPolicySource = rootProject.file("PRIVACY_POLICY.md")
 def privacyPolicyAssetDir = file("src/main/assets")
 
@@ -128,7 +128,7 @@ tasks.register('syncPrivacyPolicy') {
     inputs.file(privacyPolicySource)
     outputs.file(new File(privacyPolicyAssetDir, 'privacy_policy.md'))
     doLast {
-        // Drop the maintainer note — it is repo guidance, not something a user should read
+        // Drop the maintainer note - it is repo guidance, not something a user should read
         // in the app. Everything outside the DEV-NOTE markers ships verbatim.
         def shipped = new StringBuilder()
         def skipping = false
@@ -146,7 +146,7 @@ tasks.register('syncPrivacyPolicy') {
 tasks.named('preBuild') { dependsOn('syncPrivacyPolicy') }
 
 // Loud guard: a release build with no keystore.properties is signed with the SHARED Android
-// debug key. Such an artifact must never be published/distributed — and once users install a
+// debug key. Such an artifact must never be published/distributed - and once users install a
 // build signed with one key, every later update must use the SAME key or Android refuses to
 // update (forcing an uninstall + data loss). Warn only when a release task is actually run.
 if (!hasReleaseKeystore) {
@@ -156,7 +156,7 @@ if (!hasReleaseKeystore) {
                 "\n⚠️  Stat Up: RELEASE build is using the DEBUG keystore (no keystore.properties).\n" +
                 "    Do NOT publish or share this APK/AAB. Create keystore.properties from\n" +
                 "    keystore.properties.template with your own upload key, and keep that key\n" +
-                "    forever — switching keys later forces users to uninstall to update.\n"
+                "    forever - switching keys later forces users to uninstall to update.\n"
             )
         }
     }
@@ -210,7 +210,7 @@ dependencies {
 
     // Markdown rendering for AI chat bubbles. Backed by Markwon (View-interop), so it does
     // not bring its own Compose UI version and is safe with Compose BOM 2025.03.01.
-    // Published on JitPack — see settings.gradle for the repo entry.
+    // Published on JitPack - see settings.gradle for the repo entry.
     implementation 'com.github.jeziellago:compose-markdown:0.7.2'
 
     // Koin DI

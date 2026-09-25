@@ -29,7 +29,7 @@ import java.time.ZoneId
  *
  * RemoteViews trade-offs:
  *   - Can't use Compose, custom views, or coroutines on the rendering thread.
- *   - onUpdate arrives via BroadcastReceiver.onReceive, which runs on the MAIN thread — so the
+ *   - onUpdate arrives via BroadcastReceiver.onReceive, which runs on the MAIN thread - so the
  *     DB read is moved off it with goAsync() rather than blocking there.
  *   - Click target is the whole root view → opens MainActivity.
  */
@@ -41,7 +41,7 @@ class StatsWidgetProvider : AppWidgetProvider() {
         appWidgetIds: IntArray
     ) {
         // goAsync() keeps the receiver alive while we read off the main thread. Blocking here
-        // instead would stall the UI thread on three DB queries per broadcast — an ANR risk
+        // instead would stall the UI thread on three DB queries per broadcast - an ANR risk
         // whenever the DB is busy (e.g. mid-sync).
         val pending = goAsync()
         val appContext = context.applicationContext

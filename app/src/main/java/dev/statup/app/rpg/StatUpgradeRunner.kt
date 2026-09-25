@@ -18,7 +18,7 @@ interface StatUpgradeStore {
  * history that never got a stat, then rebuild every stat from lifetime points on the new
  * 5-points-per-stat curve.
  *
- * Order matters — the recompute sums `transactions.statType`, so it has to run *after* the
+ * Order matters - the recompute sums `transactions.statType`, so it has to run *after* the
  * backfill or the tasks that were just categorised wouldn't count toward anything.
  *
  * Gated on a stored curve version, so it runs exactly once per install no matter how often
@@ -39,7 +39,7 @@ class StatUpgradeRunner(
             return
         }
         // An install that has already finished onboarding predates the tutorial, and the
-        // tutorial's flag defaults to false — without this, upgrading users would be dropped
+        // tutorial's flag defaults to false - without this, upgrading users would be dropped
         // into a first-run walkthrough that awards them points they never asked for. Reaching
         // this line with the curve version unset is exactly the "existing install" signal.
         if (store.isOnboardingComplete()) {

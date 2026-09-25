@@ -45,7 +45,8 @@ class TasksViewModel(
     private val playerRepository: PlayerRepository,
     private val achievementTracker: AchievementTracker,
     private val todoistSyncManager: TodoistSyncManager,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val tutorialCoordinator: dev.statup.app.ui.screen.tutorial.TutorialCoordinator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TasksUiState())
@@ -58,7 +59,7 @@ class TasksViewModel(
 
     private fun loadTodoistStatus() {
         viewModelScope.launch {
-            // Hydrate the encrypted-secret cache first — the token flow starts as null even
+            // Hydrate the encrypted-secret cache first - the token flow starts as null even
             // when a token is saved, and this ViewModel can win the race against
             // StatUpApp.loadSecretsIfNeeded() on cold start.
             userPreferences.getTodoistToken()
@@ -161,7 +162,7 @@ class TasksViewModel(
             }
 
             // todoistLastSync updates reactively via the lastSyncTime flow in
-            // loadTodoistStatus() — no manual re-read needed here.
+            // loadTodoistStatus() - no manual re-read needed here.
             _uiState.update {
                 it.copy(
                     todoistSyncing = false,
@@ -228,6 +229,9 @@ class TasksViewModel(
                 statType = statType,
                 relatedId = completed.id.toString()
             )
+
+            // Advances the guided first run's "finish a task" step, if it is running.
+            tutorialCoordinator.onTaskCompleted()
 
             // Best-effort: an achievement-check failure must not crash mission completion
             // (the mission points were already awarded atomically above).

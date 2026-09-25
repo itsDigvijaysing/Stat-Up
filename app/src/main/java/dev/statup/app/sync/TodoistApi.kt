@@ -78,7 +78,7 @@ class TodoistApi(private val httpClient: HttpClient) {
                     val obj = element.jsonObject
                     // contentOrNull, not content: JsonNull.content is the STRING "null", which
                     // survives the isBlank guard below and would claim the unique externalId
-                    // index — silently dropping every later null-id task.
+                    // index - silently dropping every later null-id task.
                     val id = obj["id"]?.jsonPrimitive?.contentOrNull ?: ""
                     val taskId = obj["task_id"]?.jsonPrimitive?.contentOrNull ?: ""
                     val content = obj["content"]?.jsonPrimitive?.contentOrNull ?: ""
@@ -181,6 +181,6 @@ data class CompletedTask(
     @SerialName("completed_date")
     val completedDate: String? = null
 ) {
-    /** Stable identifier — prefer id, then task_id, then item_id */
+    /** Stable identifier - prefer id, then task_id, then item_id */
     val stableId: String get() = id.ifBlank { taskId.ifBlank { itemId } }
 }

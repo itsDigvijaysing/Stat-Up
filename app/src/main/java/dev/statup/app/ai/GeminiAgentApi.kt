@@ -21,18 +21,18 @@ import kotlinx.serialization.json.Json
  * and took 8 rapid requests without a 429. For a terse coaching reply the lite model is
  * strictly better: 4x faster, no thinking tokens eating maxOutputTokens, higher free quota.
  *
- * `gemini-2.5-flash` is CLOSED TO NEW USERS — it returns
+ * `gemini-2.5-flash` is CLOSED TO NEW USERS - it returns
  * `404 "no longer available to new users"` for any API key whose project had not already
  * used it. An existing project keeps working, which makes this trap easy to miss: testing
  * with a grandfathered developer key shows 200 while every real user gets 404. This app is
  * bring-your-own-key, so ALWAYS validate a model with a fresh key/project, never the .env one.
  *
- * When changing MODEL, re-test the whole payload, not just the name — `generationConfig`
+ * When changing MODEL, re-test the whole payload, not just the name - `generationConfig`
  * is not portable across generations. Gemini 3.x rejects the 2.x `thinkingBudget` with
  * 400 INVALID_ARGUMENT and uses `thinkingLevel` instead.
  *
  * Free-tier quota is generous on lite, but rapid-fire sends
- * can legitimately 429 — that is quota, not a bad key, and is deliberately not retried.
+ * can legitimately 429 - that is quota, not a bad key, and is deliberately not retried.
  * A transient `503 UNAVAILABLE` is capacity; the shared client's HttpRequestRetry absorbs it.
  * Verify with scripts/verify_gemini_key.sh. See: https://ai.google.dev/gemini-api/docs/models
  *
@@ -59,7 +59,7 @@ class GeminiAgentApi(
         // partial reply is still valid (don't error). Everything else in Gemini's v1beta
         // finish-reason taxonomy (SAFETY, RECITATION, BLOCKLIST, PROHIBITED_CONTENT,
         // SPII, OTHER, MALFORMED_FUNCTION_CALL …) means the response was blocked or
-        // scrubbed — surface as AgentSafetyException.
+        // scrubbed - surface as AgentSafetyException.
         private val BENIGN_FINISH_REASONS = setOf("STOP", "MAX_TOKENS")
     }
 
@@ -90,7 +90,7 @@ class GeminiAgentApi(
                     temperature = 0.7,
                     // flash-lite reports 0 thinking tokens with or without this, but pin it
                     // anyway so a future change to the model's default can't silently reintroduce
-                    // dynamic thinking — which draws from the SAME maxOutputTokens cap and, on
+                    // dynamic thinking - which draws from the SAME maxOutputTokens cap and, on
                     // 3.6-flash, ate 488 of 512 and truncated the reply at MAX_TOKENS.
                     // Gemini 3 rejects the 2.x thinkingBudget with 400 INVALID_ARGUMENT.
                     thinkingConfig = GeminiThinkingConfig(thinkingLevel = "low"),
@@ -114,7 +114,7 @@ class GeminiAgentApi(
                     throw AgentAuthException("Gemini rejected the API key (HTTP ${response.status.value}).")
                 response.status == HttpStatusCode.TooManyRequests ->
                     throw AgentRateLimitException("Gemini rate limit reached. Wait a minute and try again.")
-                // 5xx (overloaded / temporary outage) — surface as rate-limit so the UI
+                // 5xx (overloaded / temporary outage) - surface as rate-limit so the UI
                 // shows the same friendly "try again later" copy and the user isn't
                 // confronted with a raw HTTP code.
                 response.status.value in 500..599 ->

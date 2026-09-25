@@ -68,7 +68,7 @@ fun AgentScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         if (uiState.messages.isEmpty()) {
-            // weight(1f) matches MessageList below — without it, EmptyState only takes its
+            // weight(1f) matches MessageList below - without it, EmptyState only takes its
             // natural (short) height and AgentInput ends up wherever that leaves off instead
             // of pinned to the bottom, leaving it stranded mid-screen instead of docked above
             // the keyboard.
@@ -276,7 +276,7 @@ private fun MessageBubble(message: AgentMessage) {
                     fontFamily = Inter
                 )
             } else if (isUser) {
-                // User messages are plain text — they typed it.
+                // User messages are plain text - they typed it.
                 Text(
                     text = message.content,
                     color = TextPrimary,

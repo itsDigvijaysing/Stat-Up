@@ -17,7 +17,7 @@ import kotlinx.coroutines.withContext
  * and `EncryptedSharedPreferences.create`/reads can throw. [openWithRecovery] retries once
  * (transient Keystore flakes must not destroy data), then wipes the unreadable prefs file
  * and recreates it so the app still launches cleanly; the user just re-enters their
- * token/key. (The blobs are also excluded from auto-backup — see res/xml/backup_rules.xml —
+ * token/key. (The blobs are also excluded from auto-backup - see res/xml/backup_rules.xml -
  * so this is a belt-and-braces guard.)
  */
 class SecretStorage(context: Context) {

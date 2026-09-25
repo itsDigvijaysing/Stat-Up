@@ -11,16 +11,16 @@ Demo: https://www.youtube.com/watch?v=gvXfM7x2DlU
 ## Features
 
 **Progression**
-- Six stats — Strength, Intelligence, Wisdom, Dexterity, Charisma, Vitality — shown on a hexagon
+- Six stats - Strength, Intelligence, Wisdom, Dexterity, Charisma, Vitality - shown on a hexagon
   radar chart, range 5–100.
 - Points convert to stats at 5 points per stat point; the remainder is carried in a per-stat
   accumulator.
 - Rank ladder E → D → C → B → A → S → EX gated on **both** cumulative Work Days and average
   stat: D 7/6, C 15/14, B 30/24, A 60/36, S 120/50, EX 240/80. Work Days are +1 per active day,
   −1 per idle day, floored at 0, and **never reset on promotion**.
-- Demotion is Work Days only — losing a stat point never costs a rank.
+- Demotion is Work Days only - losing a stat point never costs a rank.
 - Daily decay at midnight: an idle day costs 1 Work Day and 1 point from the single highest stat.
-- Streak Freeze Shield — 30 points, max 3. An idle day consumes one instead of decaying stats.
+- Streak Freeze Shield - 30 points, max 3. An idle day consumes one instead of decaying stats.
 - First-run guided tutorial (real task → stat → reward → achievement) and a plain-language
   "How It Works" screen under Settings → About.
 
@@ -29,7 +29,7 @@ Demo: https://www.youtube.com/watch?v=gvXfM7x2DlU
 - Offline stat classifier (96 KB, on-device, no network) pre-selects the stat for a typed task
   name and fills in the stat for unlabelled Todoist tasks. Never overwrites a category you set.
 - Daily missions reset at local midnight, including when the app is never opened.
-- Optional Todoist sync — label-to-stat routing, deduplicated by task ID, runs every 15 minutes.
+- Optional Todoist sync - label-to-stat routing, deduplicated by task ID, runs every 15 minutes.
 
 **Rewards and achievements**
 - User-defined rewards with preset or custom costs up to 999,999, editable after creation.
@@ -38,7 +38,7 @@ Demo: https://www.youtube.com/watch?v=gvXfM7x2DlU
 
 **Other**
 - Mood check-in, once per local day, +2 Wisdom.
-- Daily quote — offline pack by default, or Animechan / ZenQuotes / mixed.
+- Daily quote - offline pack by default, or Animechan / ZenQuotes / mixed.
 - 4x2 home-screen widget showing rank, balance, streak and today's points.
 - Optional Gemini-backed AI coach that reads your current stats to give grounded advice.
 - Dark-only Material 3 UI with GPU backdrop blur on API 31+.
@@ -119,7 +119,7 @@ The app makes no network requests until you enable one of four optional integrat
 | Motivation quotes | `zenquotes.io` | Choosing the Motivation or Mixed quote source |
 
 The daily quote defaults to a bundled offline pack, so a fresh install is fully offline. The AI
-coach sends a snapshot of your current stats, rank, streak and recent activity with each message —
+coach sends a snapshot of your current stats, rank, streak and recent activity with each message -
 Settings shows exactly what is sent before you enable it. API tokens are stored encrypted and are
 excluded from Android backups.
 
@@ -133,10 +133,10 @@ rank changes, onboarding, and daily quotes.
 
 Not built yet:
 
-- Evening "no points yet today" reminder — needs its own scheduled worker.
+- Evening "no points yet today" reminder - needs its own scheduled worker.
 - Widget size variants and a configuration activity.
 - Persisted AI conversations. The `ai_conversations` table exists but has no DAO or consumer.
-- Dependency refresh — Compose BOM and Koin are both well behind current.
+- Dependency refresh - Compose BOM and Koin are both well behind current.
 
 ## Contributing
 
@@ -144,4 +144,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-GNU General Public License v3.0 — see [LICENSE](LICENSE).
+GNU General Public License v3.0 - see [LICENSE](LICENSE).

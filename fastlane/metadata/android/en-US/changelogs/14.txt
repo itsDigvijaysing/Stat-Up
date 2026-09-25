@@ -1,6 +1,6 @@
 Achievements overhaul + in-app guides.
 
-• Achievement rewards are much bigger — finishing one is finally worth it
+• Achievement rewards are much bigger - finishing one is finally worth it
 • Completed achievements now move to their own section at the bottom
 • Creating your own achievement is simpler: name it, set the points, tick it off when earned
 • New "?" guide on Tasks, Rewards and the AI Coach

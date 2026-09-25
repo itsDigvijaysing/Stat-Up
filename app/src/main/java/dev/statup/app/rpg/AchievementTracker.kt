@@ -59,7 +59,7 @@ class AchievementTracker(
     }
 
     /**
-     * Full check — call after any significant game event to catch everything.
+     * Full check - call after any significant game event to catch everything.
      */
     suspend fun checkAll() {
         val stats = playerRepository.getStatsOnce() ?: return
@@ -134,6 +134,7 @@ class AchievementTracker(
     private suspend fun checkTaskAchievements() {
         val taskCount = pointsRepository.getTaskTransactionCount()
         val taskAchievements = listOf(
+            "first_task" to 1,
             "tasks_10" to 10,
             "tasks_50" to 50,
             "tasks_100" to 100,

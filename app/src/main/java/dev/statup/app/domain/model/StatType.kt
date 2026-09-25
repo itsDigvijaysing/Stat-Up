@@ -5,7 +5,7 @@ import dev.statup.app.ui.theme.*
 
 /**
  * The six stats. [blurb] and [examples] are the plain-language definitions shown under the
- * stat pickers and on the How It Works screen — without them nothing in the app told a new
+ * stat pickers and on the How It Works screen - without them nothing in the app told a new
  * user what a stat actually means. Wording matches `database/README.md`, which is also the
  * spec the offline task classifier was trained against, so the two never drift apart.
  *

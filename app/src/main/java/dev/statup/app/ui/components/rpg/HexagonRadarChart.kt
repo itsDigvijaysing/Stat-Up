@@ -38,7 +38,7 @@ fun HexagonRadarChart(
     modifier: Modifier = Modifier,
     size: Dp = 200.dp,
     // Off by default: the infinite "breathe" scale animates a value read inside the Canvas draw
-    // lambda, and this chart sits on the Haze blur source layer — so leaving it on continuously
+    // lambda, and this chart sits on the Haze blur source layer - so leaving it on continuously
     // re-blurs the bottom bar, quick-action cards, and quote card every frame while Status is
     // open. The stat-fill tween on real stat changes is separate and unaffected.
     showAnimation: Boolean = false,

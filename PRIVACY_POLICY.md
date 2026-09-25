@@ -6,12 +6,12 @@
 > **Maintainer note (stripped from the in-app copy):** this file is the single source of truth
 > for the privacy policy. The `syncPrivacyPolicy` Gradle task copies it to
 > `app/src/main/assets/privacy_policy.md`, which `PrivacyPolicyScreen` renders at
-> Settings → About → Privacy Policy. Edit here only — never edit the asset copy.
+> Settings → About → Privacy Policy. Edit here only - never edit the asset copy.
 <!--DEV-NOTE-END-->
 
 ## 1. Summary
 
-Stat Up is an offline-first app. The core features — stats, ranks, streaks, tasks, missions, rewards, achievements, history, and mood check-ins — run entirely on your device and never communicate with any server. Two features are *opt-in* network integrations: Todoist sync and the AI Coach (Google Gemini). Neither runs unless you explicitly add your own API key/token in Settings.
+Stat Up is an offline-first app. The core features - stats, ranks, streaks, tasks, missions, rewards, achievements, history, and mood check-ins - run entirely on your device and never communicate with any server. Two features are *opt-in* network integrations: Todoist sync and the AI Coach (Google Gemini). Neither runs unless you explicitly add your own API key/token in Settings.
 
 ## 2. Data Stored Locally on Your Device
 
@@ -61,14 +61,14 @@ On-device data persists until you:
 - Clear app data through your device's system settings.
 - Uninstall the app.
 
-If you have Android's automatic backup enabled ("Back up to Google Drive"), your on-device app data — the local Room database (transactions, stats, missions, history, etc.) and your app settings and preferences (display name, chosen default stat, quote source, and similar) — may be included in your personal, end-to-end-encrypted Google backup so it can be restored when you reinstall. Your encrypted secrets (Todoist token, Gemini API key) are explicitly excluded from backup. This backup stays between your device and your own Google account; the app developer never receives it.
+If you have Android's automatic backup enabled ("Back up to Google Drive"), your on-device app data - the local Room database (transactions, stats, missions, history, etc.) and your app settings and preferences (display name, chosen default stat, quote source, and similar) - may be included in your personal, end-to-end-encrypted Google backup so it can be restored when you reinstall. Your encrypted secrets (Todoist token, Gemini API key) are explicitly excluded from backup. This backup stays between your device and your own Google account; the app developer never receives it.
 
 For data sent to Todoist or Google: those services retain it according to their own policies. The app cannot delete data on their servers; use their respective settings to manage your data there.
 
 ## 6. Security
 
 - All locally stored secrets (Todoist token, Gemini API key) use AndroidX Security's `EncryptedSharedPreferences` (AES-256-GCM, master key in Android Keystore).
-- Other on-device data is stored in a plain Room SQLite database — protected by Android's per-app sandboxing but not separately encrypted at rest.
+- Other on-device data is stored in a plain Room SQLite database - protected by Android's per-app sandboxing but not separately encrypted at rest.
 - All network traffic uses HTTPS.
 
 ## 7. Children's Privacy
@@ -89,5 +89,5 @@ This app is designed to comply with:
 
 - Google Play Store policies
 - Samsung Galaxy Store policies
-- GDPR (data subject rights — the app stores data only locally; subject access / deletion is achieved via the in-app Full Reset)
+- GDPR (data subject rights - the app stores data only locally; subject access / deletion is achieved via the in-app Full Reset)
 - COPPA (no personal information is collected by the app itself; the AI Coach should not be enabled for children without parental review of Google's policies)

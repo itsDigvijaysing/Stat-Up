@@ -38,7 +38,7 @@ class QuoteRepositoryTest {
             Quote(text = "pack-$epochDay", author = if (anime) "anime-pack" else "stoic-pack")
     }
 
-    private val day = LocalDate.of(2026, 6, 10) // epochDay 20614 — even
+    private val day = LocalDate.of(2026, 6, 10) // epochDay 20614 - even
 
     @Test
     fun `OFFLINE source never touches the network`() = runTest {

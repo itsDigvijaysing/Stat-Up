@@ -17,8 +17,8 @@ interface QuotePack {
 /**
  * Bundled, fully-offline quote packs (assets/quotes/anime.json + motivation.json).
  *
- * This is the DEFAULT quote source — it keeps the app's offline-first stance (network
- * sources are an explicit opt-in in Settings) — and the fallback whenever an online fetch
+ * This is the DEFAULT quote source - it keeps the app's offline-first stance (network
+ * sources are an explicit opt-in in Settings) - and the fallback whenever an online fetch
  * fails. Selection is `epochDay % size`: deterministic per day, no stored state, and the
  * pack naturally rotates.
  *

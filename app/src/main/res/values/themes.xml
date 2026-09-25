@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Main theme — Compose handles colors; this just kills the action bar and forces dark system bars. -->
+    <!-- Main theme - Compose handles colors; this just kills the action bar and forces dark system bars. -->
     <style name="Theme.StatUp" parent="android:Theme.Material.NoActionBar">
         <item name="android:colorBackground">#0A0A0F</item>
         <item name="android:statusBarColor">#0A0A0F</item>
@@ -7,7 +7,7 @@
         <item name="android:windowLightStatusBar">false</item>
     </style>
 
-    <!-- Splash theme — applied at activity launch via android:theme, swapped out post-splash by
+    <!-- Splash theme - applied at activity launch via android:theme, swapped out post-splash by
          installSplashScreen() in MainActivity. Uses the new neon-hexagon mark (rendered on the same
          #0A0A0F background) so the splash matches the launcher icon and the transition is seamless. -->
     <style name="Theme.StatUp.Splash" parent="Theme.SplashScreen">

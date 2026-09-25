@@ -7,14 +7,14 @@
 #   2. From the repo root: ./scripts/verify_gemini_key.sh
 #
 # What it does:
-#   - Loads GOOGLE_API_KEY from .env (no shell sourcing — safer if the file has quotes/spaces)
+#   - Loads GOOGLE_API_KEY from .env (no shell sourcing - safer if the file has quotes/spaces)
 #   - Lists all models the key can see (catches "wrong project / disabled API" issues fast)
 #   - Tries each candidate model with a 1-token prompt and prints HTTP status, model
 #     reply, and any rate-limit metadata Google returns
 #   - Models tested:
-#       gemini-2.5-flash         — what the app uses now (current stable)
-#       gemini-2.5-flash-lite    — higher free-tier quota (15 RPM / 1000 RPD vs 10 / 500)
-#       gemini-2.0-flash         — retired 2026-03-03; confirms the deprecation if it 4xxs
+#       gemini-2.5-flash         - what the app uses now (current stable)
+#       gemini-2.5-flash-lite    - higher free-tier quota (15 RPM / 1000 RPD vs 10 / 500)
+#       gemini-2.0-flash         - retired 2026-03-03; confirms the deprecation if it 4xxs
 
 set -u
 
@@ -50,7 +50,7 @@ echo
 BASE="https://generativelanguage.googleapis.com/v1beta"
 
 #
-# Step 1 — list models the key can access.
+# Step 1 - list models the key can access.
 #
 echo "=== Step 1: ListModels (does the key auth at all?) ==="
 LIST_OUT=$(mktemp); trap 'rm -f "$LIST_OUT"' EXIT
@@ -80,7 +80,7 @@ fi
 echo
 
 #
-# Step 2 — for each candidate model, make a tiny generateContent call and report status.
+# Step 2 - for each candidate model, make a tiny generateContent call and report status.
 #
 test_model() {
     local model="$1"

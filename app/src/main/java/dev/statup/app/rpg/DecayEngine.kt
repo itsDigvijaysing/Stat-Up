@@ -25,7 +25,7 @@ class DecayEngine(
      * If yes: recordSuccessfulDay()
      * If no: applyDecay()
      *
-     * Idempotent within a local day — returns [DailyDecayResult.AlreadyApplied] if today's
+     * Idempotent within a local day - returns [DailyDecayResult.AlreadyApplied] if today's
      * boundary was already processed. Guards against WorkManager retries, manual `runNow`
      * calls during the same day, and overlapping schedules.
      */
@@ -38,7 +38,7 @@ class DecayEngine(
 
         // Yesterday's window is [yesterday 00:00, today 00:00). Both bounds come from LocalDate
         // rather than "today - 24h" so a DST day (23h or 25h long) still maps to exactly one
-        // calendar day — otherwise an earn in the shifted hour falls outside the window and
+        // calendar day - otherwise an earn in the shifted hour falls outside the window and
         // costs the user an active day. Robust to WorkManager firing late: even at 02:15 the
         // boundaries are unchanged.
         val zone = ZoneId.systemDefault()
@@ -48,7 +48,7 @@ class DecayEngine(
 
         // Read the activity signal and apply the day's mutation inside ONE DB transaction so a
         // concurrent earn / redeem / buy-shield (each its own transaction) can't be clobbered by
-        // the full-row stats write below — which would otherwise erase a just-purchased Streak
+        // the full-row stats write below - which would otherwise erase a just-purchased Streak
         // Shield or freshly-earned stat points.
         val dailyResult = transactor.transaction {
             // Check if any EARN transactions happened yesterday
@@ -85,7 +85,7 @@ class DecayEngine(
         }
 
         // Mark the day done BEFORE the non-transactional side-effects. If a side-effect throws,
-        // DecayWorker retries — but this marker already guards against re-applying decay on that
+        // DecayWorker retries - but this marker already guards against re-applying decay on that
         // retry. (The marker lives in DataStore, not Room, so it can't join the transaction above.)
         dayStore.setLastDecayDay(today)
 
@@ -101,7 +101,7 @@ class DecayEngine(
         val stats = statsStore.getStatsOnce() ?: return DecayResult.NoStats
 
         // Stat loss: 1 point from the SINGLE highest stat above BASE_STAT. At 5 points per stat
-        // point an active day earns +2..+4, so one missed day stings but recovers same-day —
+        // point an active day earns +2..+4, so one missed day stings but recovers same-day -
         // unlike the old all-six loop, which dug a six-day hole per miss. Ties resolve to enum
         // order (STR first) so the outcome is deterministic.
         val decayed: StatType? = StatType.entries
@@ -169,7 +169,7 @@ class DecayEngine(
         // Delegate the rank decision to RankLogic. Promotion needs the day count AND the
         // average stat, so today's earns (already banked in `stats`) count toward it.
         val transition = RankLogic.applyActiveDay(stats.workDays, stats.rank, stats.averageStat())
-        // Work Days are written unconditionally — they survive promotion by design, so unlike
+        // Work Days are written unconditionally - they survive promotion by design, so unlike
         // the old model there is no "reset to 0 at the new rank" branch.
         statsStore.updateWorkDays(transition.workDays)
 
@@ -196,9 +196,9 @@ sealed class DailyDecayResult {
     data class ActiveWithRankUp(val newRank: Rank) : DailyDecayResult()
     data class IdleDay(val statsLost: Int) : DailyDecayResult()
     data class IdleWithRankDown(val newRank: Rank) : DailyDecayResult()
-    /** An idle day absorbed by a Streak Freeze Shield — no decay, streak/Work Days intact. */
+    /** An idle day absorbed by a Streak Freeze Shield - no decay, streak/Work Days intact. */
     data class ShieldConsumed(val shieldsLeft: Int) : DailyDecayResult()
-    /** Today's window was already processed — current call is a no-op (idempotency guard). */
+    /** Today's window was already processed - current call is a no-op (idempotency guard). */
     data object AlreadyApplied : DailyDecayResult()
 }
 

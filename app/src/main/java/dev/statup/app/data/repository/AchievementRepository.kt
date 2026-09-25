@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.map
 
 /**
  * Points paid out by an unlocked achievement are tagged with this prefix. They are an EARN with
- * no stat — a payout, not a task — so the classifier backfill filters them out by it. Change the
+ * no stat - a payout, not a task - so the classifier backfill filters them out by it. Change the
  * literal here and in [dev.statup.app.data.local.db.dao.TransactionDao] together, or the backfill
  * will start offering to categorise achievement payouts and its "remaining" count will never
  * reach zero.
@@ -50,7 +50,7 @@ class AchievementRepository(
      * The re-point matters on UPDATE, not install: rows are only inserted when absent, so before
      * this an existing player kept whatever rewardPoints shipped with the version they installed
      * on, and a rebalance never reached them. Already-unlocked rows are deliberately left alone
-     * (see updateRewardPointsIfLocked) — no retroactive top-up, no risk of a second payout.
+     * (see updateRewardPointsIfLocked) - no retroactive top-up, no risk of a second payout.
      */
     suspend fun initializeAchievements() {
         Achievements.ALL.forEach { achievement ->
@@ -84,7 +84,7 @@ class AchievementRepository(
      * The read-then-unlock-then-award sequence runs inside `database.withTransaction` so
      * two concurrent earns that both cross the threshold (e.g. Todoist sync + a manual
      * action in the same instant) can't both observe `isUnlocked=false` and double-award
-     * the reward. The award call itself happens outside the transaction — `pointsAwarder`
+     * the reward. The award call itself happens outside the transaction - `pointsAwarder`
      * goes through `PointsRepository.addPoints` which opens its own transaction; nested
      * Room transactions are safe but holding ours open across an unrelated insert is not
      * worth it.
@@ -137,7 +137,7 @@ class AchievementRepository(
     }
 
     /**
-     * Create a user-defined achievement. Manual-completion only — [AchievementTracker] can only
+     * Create a user-defined achievement. Manual-completion only - [AchievementTracker] can only
      * advance the hardcoded built-in ids, so a user id (`custom_…`) would never auto-progress.
      * target = 0 marks it as no-goal, which the UI renders without a progress bar.
      */

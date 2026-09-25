@@ -10,14 +10,14 @@ import java.time.LocalDate
  * Mental model:
  *   - Each active day: Work Days `+1`. Each idle day: `-1`, floored at 0.
  *   - **Work Days are never reset.** Promotion keeps the banked total, so the safety margin
- *     against demotion grows the longer the user works — no day-after-promotion cliff.
+ *     against demotion grows the longer the user works - no day-after-promotion cliff.
  *   - Promotion needs BOTH requirements: `workDays >= rank.daysRequired` and
  *     `averageStat >= rank.statsRequired`.
  *   - Demotion looks at days only ([Rank.highestByDays]). Stat decay must never demote,
  *     or a single missed day would punish twice.
  *
  * Because both directions are a lookup over [Rank], a jump of more than one rank resolves in
- * one step — which is what the one-time stat recompute needs.
+ * one step - which is what the one-time stat recompute needs.
  */
 object RankLogic {
 
@@ -62,12 +62,12 @@ object RankLogic {
      * `+1` for every day they earned something, `-1` for every day they didn't, floored at 0.
      *
      * Needed because the pre-v4 counter reset to 0 on each promotion and capped at 5, so it
-     * holds no recoverable history — reusing it as-is would drop every existing player to rank
+     * holds no recoverable history - reusing it as-is would drop every existing player to rank
      * E no matter how long they had been playing.
      *
      * Replaying day by day is not the same as `2 * active - span`: the floor at 0 means a long
      * early gap cannot mortgage later work. Counting stops at [through] (yesterday), because
-     * today has not been judged yet — tonight's tick will count it.
+     * today has not been judged yet - tonight's tick will count it.
      */
     fun reconstructWorkDays(activeDays: Set<LocalDate>, through: LocalDate): Int {
         val first = activeDays.minOrNull() ?: return 0

@@ -16,7 +16,7 @@ interface UncategorisedEarnStore {
 }
 
 /**
- * Assigns a stat to completed tasks that never got one — the case where points landed in the
+ * Assigns a stat to completed tasks that never got one - the case where points landed in the
  * balance but grew no stat at all.
  *
  * Only ever touches rows whose `statType IS NULL`; a category the user picked, or one a Todoist
@@ -25,7 +25,7 @@ interface UncategorisedEarnStore {
  *
  * Runs once automatically before the one-time stat recompute, and is re-runnable by hand from
  * Settings afterwards. The automatic first pass is followed by a full rebuild, so the
- * accumulator credit here only matters for those later manual runs — which is exactly why it
+ * accumulator credit here only matters for those later manual runs - which is exactly why it
  * is applied incrementally instead of re-deriving every stat (a re-derivation would silently
  * undo every stat point the user has since lost to decay).
  */
@@ -73,7 +73,7 @@ class CategoryBackfill(
 
     /**
      * Todoist earns are stored as "Todoist: <task title>". The prefix is app plumbing, not part
-     * of the task, and every such row would otherwise share it — feeding the model a constant
+     * of the task, and every such row would otherwise share it - feeding the model a constant
      * token that carries no signal.
      */
     private fun stripSourcePrefix(description: String): String =

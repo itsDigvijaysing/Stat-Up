@@ -30,12 +30,12 @@ class AgentViewModel(
 
     init {
         // Reactive: any change to the Gemini key (added/removed in Settings) immediately
-        // updates isConfigured — the screen doesn't need to poll on resume. The trigger lambda
+        // updates isConfigured - the screen doesn't need to poll on resume. The trigger lambda
         // in the Koin module exposes the encrypted key as a StateFlow via
         // UserPreferences.geminiApiKey.
         viewModelScope.launch {
             // Ensure the cached secret has been hydrated before the flow starts emitting
-            // — without this the flow's initial null could briefly show "not configured"
+            // - without this the flow's initial null could briefly show "not configured"
             // even for users who already have a key saved.
             userPreferences.getGeminiApiKey()
             userPreferences.geminiApiKey
@@ -66,7 +66,7 @@ class AgentViewModel(
             // Transcript excludes the pending placeholder so we don't send an empty assistant turn.
             val transcript = _uiState.value.messages.filter { !it.isPending }
             val result = agentRepository.sendMessage(transcript)
-            if (sendId != sendCounter) return@launch // cleared mid-flight — drop the result
+            if (sendId != sendCounter) return@launch // cleared mid-flight - drop the result
             result.fold(
                 onSuccess = { reply ->
                     _uiState.update { state ->

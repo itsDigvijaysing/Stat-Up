@@ -9,7 +9,7 @@ These constrain what gets merged, so check a proposal against them first.
 - **Privacy.** No analytics, telemetry, crash reporting or ads. No accounts.
 - **FOSS dependencies only.**
 - **API 26+.** Anything newer needs a runtime guard and a working fallback.
-- **Never break existing saves.** Updates must not wipe user data — see Database below.
+- **Never break existing saves.** Updates must not wipe user data - see Database below.
 
 ## Setup
 
@@ -25,7 +25,7 @@ cd Stat-Up
 ```
 
 The project targets minSdk 26, targetSdk 36, compileSdk 36. compileSdk 36 is required, not
-optional — transitive AndroidX dependencies fail the build below it.
+optional - transitive AndroidX dependencies fail the build below it.
 
 ## Architecture
 
@@ -73,7 +73,7 @@ anything network-adjacent.
 - Do not add AI attribution or generated-by trailers to commits.
 - Include screenshots for UI changes.
 - Update `README.md` when you change behaviour it documents. If you change what the AI coach sends
-  to Gemini, update the in-app disclosure in `SettingsScreen.kt` in the same commit — Play's user
+  to Gemini, update the in-app disclosure in `SettingsScreen.kt` in the same commit - Play's user
   data policy requires it to be accurate.
 
 ## Security

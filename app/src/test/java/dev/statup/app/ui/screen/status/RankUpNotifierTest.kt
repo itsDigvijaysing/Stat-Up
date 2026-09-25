@@ -20,7 +20,7 @@ class RankUpNotifierTest {
     fun `rank-up sent with no active collector is delivered to the next collector`() = runTest {
         val notifier = RankUpNotifier()
 
-        // Rank-up happens while Status is off-composition — nobody is collecting yet.
+        // Rank-up happens while Status is off-composition - nobody is collecting yet.
         notifier.notify(Rank.D)
 
         // Screen returns and starts collecting; the buffered event must arrive.

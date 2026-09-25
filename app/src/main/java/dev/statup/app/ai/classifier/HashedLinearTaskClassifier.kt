@@ -8,7 +8,7 @@ import kotlin.math.exp
 import kotlin.math.sqrt
 
 /**
- * Multinomial logistic regression over hashed character n-grams plus word uni/bigrams — the
+ * Multinomial logistic regression over hashed character n-grams plus word uni/bigrams - the
  * fastText shape, trained by `scripts/train_stat_classifier.py` and shipped as a 96 KB int8
  * blob in `assets/classifier/`.
  *
@@ -28,7 +28,7 @@ import kotlin.math.sqrt
  *  - Python's `str.split()` also splits on non-breaking space, which Java's `\s` does not
  *  - CRC32 is unsigned; `CRC32.getValue()` returns a `Long`, and taking the modulus there
  *    avoids the negative bucket a naive `Int` modulus would produce
- *  - the bias vector is stored un-quantised — it is added raw, never multiplied by the scale
+ *  - the bias vector is stored un-quantised - it is added raw, never multiplied by the scale
  */
 class HashedLinearTaskClassifier(
     private val modelBytes: () -> ByteArray,
@@ -61,34 +61,81 @@ class HashedLinearTaskClassifier(
     private fun tokenize(text: String): List<String> =
         text.lowercase().split(*WHITESPACE).filter { it.isNotEmpty() }
 
-    private fun featurise(tokens: List<String>, buckets: Int): FloatArray {
-        val v = FloatArray(buckets)
+    /**
+     * Builds the hashed feature vector, then hands back only the buckets that were actually
+     * touched. A few words touch a few hundred of the 16384 buckets, so everything downstream
+     * works off that sparse view.
+     *
+     * The L2 norm is deliberately NOT applied to the vector here. Scoring is linear, so
+     * dividing the accumulated dot product by the norm once per class is exactly equivalent to
+     * dividing all 16384 components first - and skips a whole pass over the array.
+     */
+    private fun featurise(tokens: List<String>, buckets: Int): Features {
+        val dense = FloatArray(buckets)
 
         for (token in tokens) {
             val padded = " $token "
+            // CRC32 wants bytes. Converting the padded word once and hashing byte ranges avoids
+            // a substring + a ByteArray per n-gram (~240 short-lived objects per call). Only
+            // valid while one char maps to one byte, so non-ASCII falls back to the slow path:
+            // Python slices by CHARACTER before encoding, and byte offsets would not match.
+            val asciiBytes = padded.asciiBytesOrNull()
             for (n in NGRAM_MIN..NGRAM_MAX) {
                 for (i in 0..padded.length - n) {
-                    v[bucket(padded.substring(i, i + n), buckets)] += 1f
+                    val bucket = if (asciiBytes != null) {
+                        bucketOf(asciiBytes, i, n, buckets)
+                    } else {
+                        bucketOf(padded.substring(i, i + n), buckets)
+                    }
+                    dense[bucket] += 1f
                 }
             }
         }
         for (token in tokens) {
-            v[bucket("W#$token", buckets)] += WORD_WEIGHT
+            dense[bucketOf("W#$token", buckets)] += WORD_WEIGHT
         }
         for (i in 0 until tokens.size - 1) {
-            v[bucket("W#${tokens[i]}_${tokens[i + 1]}", buckets)] += WORD_WEIGHT
+            dense[bucketOf("W#${tokens[i]}_${tokens[i + 1]}", buckets)] += WORD_WEIGHT
         }
 
+        // Single pass: collect the touched buckets and the norm together.
+        var count = 0
         var sumSquares = 0.0
-        for (value in v) sumSquares += (value * value).toDouble()
-        val norm = sqrt(sumSquares).toFloat()
-        // Zero guard: whitespace-only input yields the all-zero vector rather than NaN, and
-        // then scores on pure bias.
-        if (norm > 0f) for (i in v.indices) v[i] /= norm
-        return v
+        val indices = IntArray(buckets)
+        for (b in 0 until buckets) {
+            val v = dense[b]
+            if (v != 0f) {
+                indices[count++] = b
+                sumSquares += (v * v).toDouble()
+            }
+        }
+        return Features(dense, indices, count, sqrt(sumSquares).toFloat())
     }
 
-    private fun bucket(feature: String, buckets: Int): Int {
+    private class Features(
+        val values: FloatArray,
+        val indices: IntArray,
+        val size: Int,
+        val norm: Float
+    )
+
+    private fun String.asciiBytesOrNull(): ByteArray? {
+        val out = ByteArray(length)
+        for (i in indices) {
+            val c = this[i]
+            if (c.code > 0x7F) return null
+            out[i] = c.code.toByte()
+        }
+        return out
+    }
+
+    private fun bucketOf(bytes: ByteArray, offset: Int, length: Int, buckets: Int): Int {
+        val crc = CRC32()
+        crc.update(bytes, offset, length)
+        return (crc.value % buckets).toInt()
+    }
+
+    private fun bucketOf(feature: String, buckets: Int): Int {
         val crc = CRC32()
         crc.update(feature.toByteArray(Charsets.UTF_8))
         return (crc.value % buckets).toInt()
@@ -96,16 +143,25 @@ class HashedLinearTaskClassifier(
 
     // ---- scoring ----
 
-    private fun scores(features: FloatArray, m: Model): FloatArray {
+    /**
+     * Sparse dot product, with the L2 normalisation folded in as a single divide per class.
+     * Walking the full weight matrix would do ~98k multiply-adds to read ~2k useful ones.
+     */
+    private fun scores(features: Features, m: Model): FloatArray {
         val out = FloatArray(m.classes)
+        // A blank or whitespace-only input normalises to nothing; scoring it on pure bias
+        // matches the trainer's zero guard.
+        val inverseNorm = if (features.norm > 0f) 1f / features.norm else 0f
         for (c in 0 until m.classes) {
             var acc = 0f
             val offset = c * m.buckets
-            for (b in 0 until m.buckets) {
-                val f = features[b]
-                if (f != 0f) acc += f * m.weights[offset + b] * m.scale
+            for (i in 0 until features.size) {
+                val b = features.indices[i]
+                acc += features.values[b] * m.weights[offset + b]
             }
-            out[c] = acc + m.bias[c]
+            // One multiply by the quantisation scale per class rather than per weight; the bias
+            // is stored un-quantised, so it is added after.
+            out[c] = acc * inverseNorm * m.scale + m.bias[c]
         }
         return out
     }
@@ -156,9 +212,9 @@ class HashedLinearTaskClassifier(
         // Python's str.split() treats these as separators; Java's \s covers only the first four.
         val WHITESPACE = charArrayOf(
             ' ', '\t', '\n', '\r', '\u000B', '\u000C', '\u001C', '\u001D', '\u001E', '\u001F',
-            ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
-            ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
-            ' ', '　'
+            '\u00A0', '\u1680', '\u2000', '\u2001', '\u2002', '\u2003', '\u2004', '\u2005',
+            '\u2006', '\u2007', '\u2008', '\u2009', '\u200A', '\u2028', '\u2029', '\u202F',
+            '\u205F', '\u3000'
         )
     }
 }

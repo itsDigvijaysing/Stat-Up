@@ -297,7 +297,7 @@ private fun WeeklyChart(weeklyData: List<DayData>) {
 
                         Spacer(modifier = Modifier.height(6.dp))
 
-                        // Day label — single letter to avoid overlap
+                        // Day label - single letter to avoid overlap
                         Text(
                             text = dayData.date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
                             color = TextTertiary,
@@ -626,6 +626,6 @@ private val STATS_HELP = listOf(
     ),
     HelpPoint(
         "Top sources",
-        "Where your points actually come from — useful for spotting a stat you never train."
+        "Where your points actually come from - useful for spotting a stat you never train."
     )
 )

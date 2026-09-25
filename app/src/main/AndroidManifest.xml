@@ -32,7 +32,7 @@
         </activity>
 
         <!-- Home-screen widget: shows rank, balance, streak, today's earned points.
-             updatePeriodMillis=0 in widget_stats_info.xml — refreshes are pushed by
+             updatePeriodMillis=0 in widget_stats_info.xml - refreshes are pushed by
              StatsWidgetUpdater from the data layer instead of polling. -->
         <receiver
             android:name=".widget.StatsWidgetProvider"

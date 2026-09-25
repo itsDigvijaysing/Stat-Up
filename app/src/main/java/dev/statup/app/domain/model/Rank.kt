@@ -8,7 +8,7 @@ import dev.statup.app.ui.theme.*
  * alone so a stat lost to decay can never cost the user a rank.
  *
  * [daysRequired] is measured against the cumulative Work Day counter
- * (`player_stats.rankUpStreakCounter` — same column, new meaning), which is never reset on
+ * (`player_stats.rankUpStreakCounter` - same column, new meaning), which is never reset on
  * promotion. [statsRequired] is measured against [PlayerStats.averageStat].
  */
 enum class Rank(
@@ -36,14 +36,14 @@ enum class Rank(
         fun fromString(value: String): Rank = entries.find { it.name == value } ?: E
 
         /**
-         * Highest rank whose day AND stat requirements are both met — the promotion target.
+         * Highest rank whose day AND stat requirements are both met - the promotion target.
          * [E] requires nothing, so this always resolves.
          */
         fun highestQualified(workDays: Int, averageStat: Float): Rank =
             entries.last { workDays >= it.daysRequired && averageStat >= it.statsRequired }
 
         /**
-         * Highest rank whose day requirement alone is met — the demotion floor. Stats are
+         * Highest rank whose day requirement alone is met - the demotion floor. Stats are
          * deliberately ignored: losing a stat point must never demote.
          */
         fun highestByDays(workDays: Int): Rank =

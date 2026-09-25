@@ -26,7 +26,7 @@ val AccentError = Color(0xFFFF5252)
 // Text
 val TextPrimary = Color(0xFFF0F0F5)
 val TextSecondary = Color(0xFFA0A0B8)
-// Lightened from #6B6B80 (3.8:1 on the #0A0A0F background — below WCAG AA) to #8A8AA0 (≈5.85:1)
+// Lightened from #6B6B80 (3.8:1 on the #0A0A0F background - below WCAG AA) to #8A8AA0 (≈5.85:1)
 // so tertiary informational text (quote attribution, sync status, legends, footers) passes AA.
 val TextTertiary = Color(0xFF8A8AA0)
 val TextOnAccent = Color.White

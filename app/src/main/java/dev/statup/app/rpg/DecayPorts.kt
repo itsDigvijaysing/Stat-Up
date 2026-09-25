@@ -6,7 +6,7 @@ import dev.statup.app.domain.model.Rank
 /**
  * Narrow read/write surface that [DecayEngine] needs from the player-stats store. Implemented by
  * [dev.statup.app.data.repository.PlayerRepository]; depending on this interface (instead of
- * the concrete repository) lets DecayEngine be unit-tested on the JVM with a hand-written fake —
+ * the concrete repository) lets DecayEngine be unit-tested on the JVM with a hand-written fake -
  * no Android, no Room.
  */
 interface DecayStatsStore {

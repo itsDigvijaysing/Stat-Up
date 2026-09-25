@@ -10,7 +10,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // For dev.jeziellago:compose-markdown — published on JitPack only.
+        // For dev.jeziellago:compose-markdown - published on JitPack only.
         maven { url 'https://jitpack.io' }
     }
 }

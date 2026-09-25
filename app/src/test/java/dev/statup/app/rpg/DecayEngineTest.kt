@@ -14,7 +14,7 @@ import org.junit.Test
 import java.time.LocalDate
 
 /**
- * JVM tests for [DecayEngine.applyDailyDecay] — the daily-tick heart. Uses hand-written fakes for
+ * JVM tests for [DecayEngine.applyDailyDecay] - the daily-tick heart. Uses hand-written fakes for
  * the narrow ports (no Android / Room), matching the project's test style. The atomicity wrapper
  * is exercised via a pass-through [Transactor]; the read-modify-write logic and the idempotency
  * gate are what's under test here.
@@ -89,7 +89,7 @@ class DecayEngineTest {
     }
 
     @Test
-    fun `decay floors at base — no loss and no log row when already at base`() = runTest {
+    fun `decay floors at base - no loss and no log row when already at base`() = runTest {
         val stats = FakeStatsStore(PlayerStats(rank = Rank.D, rankUpStreakCounter = 15)) // all at BASE_STAT
         val log = FakeDecayLogDao()
 

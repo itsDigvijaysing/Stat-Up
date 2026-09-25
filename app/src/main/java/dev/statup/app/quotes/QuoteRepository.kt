@@ -7,7 +7,7 @@ import java.time.LocalDate
 
 /**
  * Narrow persistence slice for the daily quote (implemented by UserPreferences; faked in
- * unit tests — same pattern as PlayerStateProvider).
+ * unit tests - same pattern as PlayerStateProvider).
  */
 interface DailyQuoteStore {
     /** The user's chosen [QuoteSource] name (Settings). Defaults to OFFLINE. */

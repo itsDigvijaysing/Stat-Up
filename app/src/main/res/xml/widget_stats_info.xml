@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Widget metadata. updatePeriodMillis=0 disables AlarmManager auto-updates —
+    Widget metadata. updatePeriodMillis=0 disables AlarmManager auto-updates -
     StatsWidgetUpdater drives refreshes from the app's data layer instead, which is both
     cheaper (no idle pings) and immediate (no 30-min minimum). On install / boot the
     system invokes onUpdate once anyway, so the initial render is covered.
@@ -15,7 +15,7 @@
     android:previewLayout="@layout/widget_stats"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />
-    <!-- No android:configure — the widget has no setup step. An empty-string value is not the
+    <!-- No android:configure - the widget has no setup step. An empty-string value is not the
          same as omitting it: some launchers read it as "a configuration activity exists" and
          try to start a component with a blank class name when the widget is dropped. -->
 

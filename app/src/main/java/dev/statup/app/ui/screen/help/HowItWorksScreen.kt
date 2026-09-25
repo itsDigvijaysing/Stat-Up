@@ -28,7 +28,7 @@ import dev.statup.app.ui.theme.*
  *
  * Every number on this screen is read from the live constants ([PlayerStats.POINTS_PER_STAT],
  * [Rank.daysRequired], [Rank.statsRequired], [StatType.blurb]) rather than written into the
- * copy, so rebalancing the game can never leave this page quietly lying to the user — which is
+ * copy, so rebalancing the game can never leave this page quietly lying to the user - which is
  * exactly what happened to the old hardcoded help text.
  */
 @Composable
@@ -71,7 +71,7 @@ fun HowItWorksScreen(navController: NavController) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Body(
-                    "The same points do both — spending them on a reward never takes away " +
+                    "The same points do both - spending them on a reward never takes away " +
                         "stat progress you already earned."
                 )
             }
@@ -120,7 +120,7 @@ fun HowItWorksScreen(navController: NavController) {
             Section("Work days and rank") {
                 Body(
                     "Any day you earn at least one point counts as a work day. Work days add " +
-                        "up for as long as you use the app and never reset — not even when you " +
+                        "up for as long as you use the app and never reset - not even when you " +
                         "rank up."
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -168,7 +168,7 @@ fun HowItWorksScreen(navController: NavController) {
             Section("Missing a day") {
                 Body(
                     "Miss a day and you lose one work day and one point from whichever stat is " +
-                        "highest. Just one stat, not all six — one good day puts it back."
+                        "highest. Just one stat, not all six - one good day puts it back."
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Body(
@@ -178,7 +178,7 @@ fun HowItWorksScreen(navController: NavController) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Body(
                     "A Streak Freeze Shield (${PlayerStats.SHIELD_COST} points, up to " +
-                        "${PlayerStats.MAX_SHIELDS} held) absorbs one missed day completely — " +
+                        "${PlayerStats.MAX_SHIELDS} held) absorbs one missed day completely - " +
                         "no lost work day, no lost stat."
                 )
             }
@@ -186,7 +186,7 @@ fun HowItWorksScreen(navController: NavController) {
             Section("Stat categories") {
                 Body(
                     "When you type a task name, the app guesses which stat it belongs to and " +
-                        "pre-selects it. The guess runs on your device — nothing is sent " +
+                        "pre-selects it. The guess runs on your device - nothing is sent " +
                         "anywhere. You can always change it, and a category you pick yourself " +
                         "is never overwritten."
                 )
@@ -199,7 +199,7 @@ fun HowItWorksScreen(navController: NavController) {
 
             Section("Rewards") {
                 Body(
-                    "Rewards are yours to invent — the starter list is only a suggestion. Edit " +
+                    "Rewards are yours to invent - the starter list is only a suggestion. Edit " +
                         "them, delete them, set any cost up to 999,999. Redeeming spends points " +
                         "from your balance; your stats and rank are unaffected."
                 )

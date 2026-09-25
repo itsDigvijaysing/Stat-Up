@@ -11,7 +11,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.EventAvailable
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.LocalFireDepartment
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -66,7 +74,7 @@ fun StatusWindow(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Rank Badge — clickable for rank info
+        // Rank Badge - clickable for rank info
         Box(
             modifier = Modifier.clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -87,7 +95,7 @@ fun StatusWindow(
             fontFamily = Inter
         )
 
-        // Equipped achievement title — tap to change. Shows a subtle hint when none is
+        // Equipped achievement title - tap to change. Shows a subtle hint when none is
         // equipped so the feature is discoverable without cluttering the sheet.
         Text(
             text = equippedTitle?.let { "« $it »" } ?: "+ set title",
@@ -107,7 +115,7 @@ fun StatusWindow(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "✨ ${stats.totalPointsEarned} pts",
+            text = "✨ $availablePoints pts",
             color = PointsGold,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
@@ -145,19 +153,13 @@ fun StatusWindow(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Footer — compact row with streak, points, Work Days
+        // Footer - both rank requirements plus the streak. The promotion gates sit here
+        // rather than in a separate block below: three values the user can compare at a
+        // glance, instead of a second box repeating them.
         StatusFooter(
-            streak = stats.streak,
-            workDays = stats.workDays,
-            nextRank = stats.rank.nextRank(),
-            availablePoints = availablePoints,
+            stats = stats,
             onHistoryClick = onHistoryClick
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Both promotion requirements, always visible, with the blocking one marked.
-        RankProgressBlock(stats = stats)
     }
 
     // Rank Info Dialog
@@ -194,73 +196,107 @@ private fun StatusHeader() {
 
 @Composable
 private fun StatusFooter(
-    streak: Int,
-    workDays: Int,
-    nextRank: Rank?,
-    availablePoints: Int,
+    stats: PlayerStats,
     onHistoryClick: () -> Unit = {}
 ) {
+    val next = stats.rank.nextRank()
+
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.Top
     ) {
+        // Avg stat and Work Days are the two promotion gates. Showing each as `have / need`
+        // and colouring it keeps "which one is blocking me" readable without a second box -
+        // three bare numbers would have lost that.
         FooterItem(
-            emoji = "🔥",
+            icon = Icons.Outlined.Insights,
+            label = "Avg Stat",
+            modifier = Modifier.weight(1f),
+            value = next?.let { "${stats.averageStat().toInt()} / ${it.statsRequired}" }
+                ?: "${stats.averageStat().toInt()}",
+            met = next == null || stats.averageStat() >= next.statsRequired
+        )
+        FooterItem(
+            icon = Icons.Outlined.LocalFireDepartment,
             label = "Streak",
-            value = "$streak days"
+            modifier = Modifier.weight(1f),
+            value = "${stats.streak} days"
         )
         FooterItem(
-            emoji = "✨",
-            label = "Available",
-            value = "$availablePoints pts",
-            highlight = true,
-            onClick = onHistoryClick
-        )
-        // At the top rank there is nothing left to count toward, so show the banked total.
-        FooterItem(
-            emoji = "⭐",
+            icon = Icons.Outlined.EventAvailable,
             label = "Work Days",
-            value = if (nextRank != null) "$workDays / ${nextRank.daysRequired}" else "$workDays"
+            modifier = Modifier.weight(1f),
+            value = next?.let { "${stats.workDays} / ${it.daysRequired}" } ?: "${stats.workDays}",
+            met = next == null || stats.workDays >= next.daysRequired,
+            onClick = onHistoryClick
         )
     }
 }
 
 @Composable
 private fun FooterItem(
-    emoji: String,
+    icon: ImageVector,
     label: String,
+    modifier: Modifier = Modifier,
     value: String,
-    highlight: Boolean = false,
+    /** null = not a rank gate (no target to meet), so it stays neutral. */
+    met: Boolean? = null,
     onClick: (() -> Unit)? = null
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = if (onClick != null) {
+        modifier = modifier.then(
+            if (onClick != null) {
             Modifier.clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick
             )
         } else Modifier
-    ) {
-        Text(
-            text = emoji,
-            fontSize = 20.sp
         )
-        Spacer(modifier = Modifier.height(4.dp))
+    ) {
+        val tint = when (met) {
+            true -> AccentSuccess
+            false -> AccentWarning
+            null -> AccentPrimary
+        }
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = label,
             color = TextTertiary,
             fontSize = 10.sp,
-            fontFamily = Inter
+            fontFamily = Inter,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
         Text(
             text = value,
-            color = if (highlight) PointsGold else TextPrimary,
+            color = when (met) {
+                true -> AccentSuccess
+                false -> AccentWarning
+                null -> TextPrimary
+            },
             fontSize = 12.sp,
-            fontWeight = if (highlight) FontWeight.Bold else FontWeight.SemiBold,
-            fontFamily = Inter
+            fontWeight = FontWeight.Bold,
+            fontFamily = Inter,
+            // A long value ("1234 / 240") must shrink rather than wrap or shove its
+            // neighbours: the three columns are fixed thirds.
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Visible,
+            textAlign = TextAlign.Center,
+            style = LocalTextStyle.current.copy(
+                lineHeight = 14.sp,
+                platformStyle = null
+            ),
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }
@@ -268,7 +304,7 @@ private fun FooterItem(
 /**
  * Shows BOTH promotion requirements at once and marks which one is blocking. The old display
  * was five stars off a single counter, which couldn't express "your days are there but your
- * stats aren't" — the exact state most users sit in.
+ * stats aren't" - the exact state most users sit in.
  */
 @Composable
 fun RankProgressBlock(
@@ -287,7 +323,7 @@ fun RankProgressBlock(
     ) {
         if (next == null) {
             Text(
-                text = "Rank ${stats.rank.name} — top of the ladder",
+                text = "Rank ${stats.rank.name} - top of the ladder",
                 color = PointsGold,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
@@ -406,7 +442,7 @@ private fun RankInfoDialog(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Work days never reset when you rank up — they keep adding up, so " +
+                        text = "Work days never reset when you rank up - they keep adding up, so " +
                             "the longer you go the safer your rank gets.",
                         color = PointsGold,
                         fontSize = 13.sp,
@@ -469,7 +505,7 @@ private fun RankInfoDialog(
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
-                                text = if (rank == Rank.E) "—" else "${rank.daysRequired}",
+                                text = if (rank == Rank.E) "-" else "${rank.daysRequired}",
                                 color = if (isCurrent) TextPrimary else TextTertiary,
                                 fontSize = 13.sp,
                                 fontFamily = Inter,
@@ -477,7 +513,7 @@ private fun RankInfoDialog(
                                 modifier = Modifier.width(44.dp)
                             )
                             Text(
-                                text = if (rank == Rank.E) "—" else "${rank.statsRequired}",
+                                text = if (rank == Rank.E) "-" else "${rank.statsRequired}",
                                 color = if (isCurrent) TextPrimary else TextTertiary,
                                 fontSize = 13.sp,
                                 fontFamily = Inter,

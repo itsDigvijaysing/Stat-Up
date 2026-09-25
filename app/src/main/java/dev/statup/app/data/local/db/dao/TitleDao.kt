@@ -33,7 +33,7 @@ interface TitleDao {
 
     /**
      * Re-point a built-in achievement the user has NOT unlocked yet. Guarded on isUnlocked = 0
-     * so an already-claimed row keeps the value that was actually paid out — re-pointing it
+     * so an already-claimed row keeps the value that was actually paid out - re-pointing it
      * would advertise a reward the player never received.
      */
     @Query("UPDATE titles SET rewardPoints = :points WHERE id = :id AND isUnlocked = 0")

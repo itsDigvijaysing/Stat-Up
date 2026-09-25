@@ -31,7 +31,7 @@ import org.koin.core.logger.Level
 class StatUpApp : Application() {
     // SupervisorJob keeps siblings alive on one child failure; the handler swallows the
     // exception so it doesn't propagate to the global Thread uncaught handler (which on
-    // Android typically crashes the app at startup — bad for a one-off init failure).
+    // Android typically crashes the app at startup - bad for a one-off init failure).
     private val initExceptionHandler = CoroutineExceptionHandler { _, e ->
         Log.e("StatUpApp", "Init coroutine failed", e)
     }

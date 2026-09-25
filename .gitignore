@@ -31,10 +31,10 @@ keystore.properties
 .vscode
 .kotlin
 graphify-out
-# Local dev-tooling docs / generated output — not for publishing
+# Local dev-tooling docs / generated output - not for publishing
 CLAUDE.md
 
-# Generated from PRIVACY_POLICY.md by the syncPrivacyPolicy Gradle task — do not edit or commit.
+# Generated from PRIVACY_POLICY.md by the syncPrivacyPolicy Gradle task - do not edit or commit.
 app/src/main/assets/privacy_policy.md
 
 # Built APKs/AABs. Published builds belong in GitHub Releases, not in git history.
@@ -42,7 +42,7 @@ App Build/
 *.apk
 *.aab
 
-# Play Store listing art — to be redesigned; kept out of the repo until then.
+# Play Store listing art - to be redesigned; kept out of the repo until then.
 fastlane/metadata/android/en-US/images/featureGraphic.png
 fastlane/metadata/android/en-US/images/phoneScreenshots/
 scripts/make_feature_graphic.py
