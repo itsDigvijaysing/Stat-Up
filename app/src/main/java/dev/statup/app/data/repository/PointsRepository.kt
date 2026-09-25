@@ -22,7 +22,9 @@ class PointsRepository(
     private val userPreferences: UserPreferences,
     private val widgetUpdater: StatsWidgetUpdater? = null
 ) : dev.statup.app.rpg.LifetimeStatPointsSource,
-    dev.statup.app.ai.classifier.UncategorisedEarnStore {
+    dev.statup.app.ai.classifier.UncategorisedEarnStore,
+    dev.statup.app.ui.screen.tutorial.AchievementPayoutProbe,
+    dev.statup.app.data.repository.MissionAwardProbe {
     val transactions: Flow<List<Transaction>> = transactionDao.getAll().map { list ->
         list.map { it.toDomain() }
     }
@@ -52,6 +54,12 @@ class PointsRepository(
 
     /** Live count of earns still missing a stat - drives the Settings row's subtitle. */
     val uncategorisedCount: Flow<Int> = transactionDao.countUncategorisedEarns()
+
+    override suspend fun isAchievementPaid(achievementId: String): Boolean =
+        transactionDao.countByDescription("$ACHIEVEMENT_REWARD_PREFIX$achievementId") > 0
+
+    override suspend fun hasBeenAwarded(missionId: Long): Boolean =
+        transactionDao.countMissionAwards(missionId.toString()) > 0
 
     /**
      * Insert the transaction, increment totals + stat accumulator. All DB writes happen

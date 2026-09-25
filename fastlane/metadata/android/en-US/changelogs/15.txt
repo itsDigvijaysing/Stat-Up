@@ -1,0 +1,8 @@
+Ranks now run on work days, and there's a new EX rank at the top.
+
+• Any day you earn something is a work day. Work days plus your average stat carry you from E to EX
+• Work days never reset when you rank up
+• Miss a day and you lose one work day and a point off your highest stat - not all six
+• Stats level twice as fast: 5 points per stat point
+• New tasks get sorted into a stat for you, on your device
+• A guided tour on first run, plus a How It Works page

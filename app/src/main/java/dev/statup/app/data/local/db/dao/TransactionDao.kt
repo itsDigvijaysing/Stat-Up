@@ -68,6 +68,24 @@ interface TransactionDao {
     )
     fun countUncategorisedEarns(): Flow<Int>
 
+    /**
+     * Whether a specific achievement payout has actually committed.
+     *
+     * The guided tutorial needs this: it tells the user how many points they now have and then asks
+     * them to spend exactly that, so it must not advance on a timer while the payout is still in
+     * flight. Matching the description is how the payout is identified - `ACHIEVEMENT_REWARD_PREFIX`
+     * plus the achievement id, written by the awarder in `AppModule`.
+     */
+    @Query("SELECT COUNT(*) FROM transactions WHERE type = 'EARN' AND description = :description")
+    suspend fun countByDescription(description: String): Int
+
+    /**
+     * How many times a mission has already been paid for. Used to stop a non-daily (one-off)
+     * mission being re-awarded after it was un-completed by the pre-fix nightly reset.
+     */
+    @Query("SELECT COUNT(*) FROM transactions WHERE source = 'MISSION' AND relatedId = :missionId")
+    suspend fun countMissionAwards(missionId: String): Int
+
     @Query("SELECT SUM(points) FROM transactions WHERE type = 'EARN'")
     suspend fun getTotalEarned(): Int?
 

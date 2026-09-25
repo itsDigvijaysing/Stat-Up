@@ -86,7 +86,15 @@ class RewardsViewModel(
                     it.copy(redeemSuccess = RedeemSuccess(++redeemEventId, reward.name))
                 }
             }.onFailure { error ->
-                _uiState.update { it.copy(error = error.message) }
+                // Name the shortfall rather than restating both numbers. This is also the message
+                // the guided tour's last step surfaces if the balance is somehow short, so it has to
+                // tell the user what to do rather than just that something failed.
+                val message = when (error) {
+                    is dev.statup.app.data.repository.InsufficientPointsException ->
+                        "You need ${error.required - error.available} more points for this."
+                    else -> error.message
+                }
+                _uiState.update { it.copy(error = message) }
             }
         }
     }

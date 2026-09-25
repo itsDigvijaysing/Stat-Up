@@ -26,8 +26,9 @@ android {
         // on 2026-06-10: no edge-to-edge opt-outs, no orientation locks, no custom back
         // handling in this app, so the API-36 behavior changes are no-ops here.
         targetSdk 36
-        // versionCode 13 shipped as v3.1.5. Play requires a strictly higher code per upload.
-        versionCode 14
+        // versionCode 14 shipped as v3.1.6. Play requires a strictly higher code per upload,
+        // so every submission bumps this even when versionName barely moves.
+        versionCode 15
         versionName "3.2.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

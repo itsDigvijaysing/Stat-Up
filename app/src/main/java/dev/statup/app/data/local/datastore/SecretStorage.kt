@@ -55,6 +55,22 @@ class SecretStorage(context: Context) {
         }.apply()
     }
 
+    /**
+     * Like [putString] but synchronous and reporting: returns whether the write reached disk.
+     *
+     * Only for the legacy-secret migration, which deletes the plaintext original once this succeeds.
+     * `apply()` returns before the write is durable and never reports failure, and a read-back after
+     * it only proves the in-memory value - so with `apply()` the plaintext could be deleted against a
+     * write that never landed. `commit()` is the wrong default for ordinary writes, which is why this
+     * is a separate method rather than a change to [putString].
+     */
+    // Not the KTX `edit { }` extension on purpose: it returns Unit, and the whole point here is
+    // commit()'s boolean - without it we would delete the plaintext against an unverified write.
+    @Suppress("UseKtx")
+    suspend fun putStringDurable(key: String, value: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching { prefs.edit().putString(key, value).commit() }.getOrDefault(false)
+    }
+
     suspend fun clear() = withContext(Dispatchers.IO) {
         prefs.edit().clear().apply()
     }

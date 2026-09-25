@@ -64,19 +64,23 @@ class StatUpApp : Application() {
         appScope.launch { StatMappingSeeder.seedIfEmpty(database, statMappingDao) }
         appScope.launch { userPreferences.loadSecretsIfNeeded() }
 
-        // The guided tour is for a genuinely new install. `firstInstallTime` and
-        // `lastUpdateTime` are equal only until the app is first updated, so any diverging
-        // pair means this device has had the app before and should not be taught it again -
-        // including someone who abandoned the tour and later took an update.
+        // First-run resolution, then seeding, then the gate - strictly in that order, in ONE
+        // coroutine. The tutorial flag and the starter-content flag both default to false, which is
+        // indistinguishable from "an install that predates them", so they have to be decided before
+        // the UI reads them. Previously two separate coroutines wrote them while AppNavigation was
+        // already collecting, and whoever won decided whether an updating user got a tour and 13
+        // sample items they never asked for. The gate is marked last so the tabs are never gate-open
+        // and empty at the same time.
         appScope.launch {
-            if (!userPreferences.tutorialComplete.first() && !isFreshInstall()) {
-                userPreferences.setTutorialComplete(true)
+            try {
+                userPreferences.resolveFirstRunFlags(isFreshInstall())
+                StarterContentSeeder.seedIfNeeded(database, get<MissionDao>(), get<RewardDao>(), userPreferences)
+            } finally {
+                // The gate opens even if seeding failed. The UI blocks on it, so leaving it shut
+                // would strand the user on a blank frame - empty Tasks and Rewards tabs are a far
+                // better failure than no app at all.
+                userPreferences.markFirstRunResolved()
             }
-        }
-
-        // Starter missions + rewards, once per install, so Tasks and Rewards never open empty.
-        appScope.launch {
-            StarterContentSeeder.seedIfNeeded(database, get<MissionDao>(), get<RewardDao>(), userPreferences)
         }
 
         // One-time upgrade for pre-rebalance installs: categorise uncategorised history, then
@@ -84,7 +88,7 @@ class StatUpApp : Application() {
         // the singleton row exists, so it is chained onto that launch rather than racing it.
         appScope.launch {
             playerRepository.initializeStats()
-            get<StatUpgradeRunner>().runIfNeeded()
+            get<StatUpgradeRunner>().runIfNeeded(isFreshInstall = isFreshInstall())
         }
 
         // Refresh any installed home-screen widget with the current DB state. The system also

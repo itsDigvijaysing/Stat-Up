@@ -86,7 +86,7 @@ fun TutorialIntroDialog(onStart: () -> Unit, onSkip: () -> Unit) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = "Three steps, about thirty seconds. You'll finish a real task, " +
-                        "unlock a real achievement and spend what you earn : none of it is " +
+                        "unlock a real achievement and spend what you earn - none of it is " +
                         "pretend, it all stays on your account.",
                     color = TextSecondary,
                     fontSize = 14.sp,
@@ -102,7 +102,7 @@ fun TutorialIntroDialog(onStart: () -> Unit, onSkip: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(14.dp))
                 Text(
-                    text = "Skip : I'll explore on my own",
+                    text = "Skip - I'll explore on my own",
                     color = TextTertiary,
                     fontSize = 13.sp,
                     fontFamily = Inter,
@@ -126,9 +126,11 @@ fun TutorialIntroDialog(onStart: () -> Unit, onSkip: () -> Unit) {
  * It does not navigate. When the step lives on another tab it names that tab and the bottom
  * bar pulses it, so the user learns the layout by moving through it themselves.
  *
- * The achievement step has no target tab at all - the unlock popup comes to the user - so
- * this strip is its fallback: if the popup never fires (the achievement was already unlocked
- * on an earlier run) the step is still completable from here.
+ * The achievement step has no target tab at all - the unlock popup comes to the user - so this
+ * strip only narrates it. **The strip is display-only: it has no button and no tap handler**, so it
+ * cannot complete a step. If the popup never fires (the achievement was already unlocked on an
+ * earlier run) the step is advanced by `AppNavigation`, which waits for the payout transaction to
+ * land. Do not delete that wait on the assumption this strip is a fallback - it is not.
  */
 @Composable
 fun TutorialOverlay(
@@ -138,6 +140,11 @@ fun TutorialOverlay(
     currentRoute: String,
     /** False on hidden detail screens, where there is no tab to point at. */
     hasBottomBar: Boolean,
+    /**
+     * Abandons the tour. Present on every step, not just the intro: without an exit here, a step the
+     * user cannot complete has no way out, which is exactly how the earlier dead ends were reachable.
+     */
+    onSkip: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(16.dp)
@@ -159,6 +166,9 @@ fun TutorialOverlay(
             .border(1.5.dp, AccentPrimary.copy(alpha = borderAlpha), shape)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
+        // INTRO is ordinal 0 and is never rendered here (AppNavigation filters it out), so the
+        // three real steps read 1..3. That only holds while INTRO stays first in the enum -
+        // inserting a step before it silently renumbers every label.
         Text(
             text = "STEP ${step.ordinal} OF 3",
             color = AccentPrimary,
@@ -188,6 +198,22 @@ fun TutorialOverlay(
             lineHeight = 18.sp
         )
 
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Skip tour",
+            color = TextTertiary,
+            fontSize = 12.sp,
+            fontFamily = Inter,
+            modifier = Modifier
+                .align(Alignment.End)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onSkip
+                )
+                // Keeps the tap target at 48dp without making the label itself look bulky.
+                .padding(horizontal = 12.dp, vertical = 14.dp)
+        )
     }
 }
 
@@ -227,9 +253,11 @@ private val TutorialStep.body: String
                 "${TutorialCoordinator.TUTORIAL_TASK_POINTS} points, and every " +
                 "${PlayerStats.POINTS_PER_STAT} points in a stat raises it by one."
         TutorialStep.SEE_ACHIEVEMENT ->
-            "That popup was an achievement unlocking - it paid 45 points on top of the task. " +
+            "That popup was an achievement unlocking - it paid " +
+                "${TutorialCoordinator.FIRST_TASK_REWARD} points on top of the task. " +
                 "They unlock on their own as you play, and most pay you back."
         TutorialStep.REDEEM_REWARD ->
-            "You have 50 points : exactly what \"${TutorialCoordinator.TUTORIAL_REWARD_NAME}\" " +
-                "costs. Tap Redeem on it."
+            "You have ${TutorialCoordinator.TUTORIAL_TASK_POINTS + TutorialCoordinator.FIRST_TASK_REWARD} " +
+                "points - exactly what \"${TutorialCoordinator.TUTORIAL_REWARD_NAME}\" costs. " +
+                "Tap Redeem on it."
     }

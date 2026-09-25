@@ -11,6 +11,9 @@ import dev.statup.app.domain.model.StatType
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -50,21 +53,30 @@ class StatUpgradeRunnerTest {
     }
 
     @Test
-    fun `an install that already onboarded is not sent through the tutorial`() = runTest {
-        val store = FakeStore(onboarded = true)
+    fun `a fresh install stamps the version without doing any work`() = runTest {
+        val store = FakeStore()
+        val earns = FakeEarnStore(mutableListOf(UncategorisedEarn(1L, "go for a run", 20)))
+        val seeded = PlayerStats()
+        val stats = FakeStatsStore(seeded)
 
-        runner(store, FakeEarnStore(mutableListOf()), FakeStatsStore(PlayerStats())).runIfNeeded()
+        runner(store, earns, stats).runIfNeeded(isFreshInstall = true)
 
-        assertTrue("upgrading users must skip the first-run walkthrough", store.tutorialComplete)
+        assertEquals("version stamped so it never runs again", 1, store.curveVersion)
+        assertEquals("no history to categorise on a fresh install", 0, earns.reads)
+        assertSame("the freshly seeded stats row is not rewritten", seeded, stats.stats)
     }
 
     @Test
-    fun `a fresh install still gets the tutorial`() = runTest {
-        val store = FakeStore(onboarded = false)
+    fun `auto-categorise off skips the backfill but still recomputes`() = runTest {
+        val store = FakeStore(autoCategorise = false)
+        val earns = FakeEarnStore(mutableListOf(UncategorisedEarn(1L, "go for a run", 20)))
+        val stats = FakeStatsStore(PlayerStats())
 
-        runner(store, FakeEarnStore(mutableListOf()), FakeStatsStore(PlayerStats())).runIfNeeded()
+        runner(store, earns, stats).runIfNeeded()
 
-        assertFalse(store.tutorialComplete)
+        assertEquals("classifier must never be consulted when the setting is off", 0, earns.reads)
+        assertEquals("the recompute still runs", 1, store.curveVersion)
+        assertNotNull("stats were rebuilt", stats.stats)
     }
 
     @Test
@@ -107,13 +119,11 @@ class StatUpgradeRunnerTest {
 
     private class FakeStore(
         var curveVersion: Int = 0,
-        private val onboarded: Boolean = false
+        private val autoCategorise: Boolean = true
     ) : StatUpgradeStore {
-        var tutorialComplete = false
         override suspend fun getStatCurveVersion(): Int = curveVersion
         override suspend fun setStatCurveVersion(version: Int) { curveVersion = version }
-        override suspend fun isOnboardingComplete(): Boolean = onboarded
-        override suspend fun setTutorialComplete(complete: Boolean) { tutorialComplete = complete }
+        override suspend fun isAutoCategoriseEnabled(): Boolean = autoCategorise
     }
 
     private class FakeEarnStore(private val rows: MutableList<UncategorisedEarn>) : UncategorisedEarnStore {

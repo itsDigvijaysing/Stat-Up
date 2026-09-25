@@ -7,7 +7,9 @@ Do tasks, earn points, improve your stats, hold your streak, climb the ranks, an
 FEATURES:
 • RPG stats system - Strength, Intelligence, Wisdom, Dexterity, Charisma, Vitality
 • Hexagon radar chart with tap-to-expand stat details
-• Rank system - progress from E → S based on streak consistency
+• Rank system - climb from E → EX on cumulative work days plus your average stat
+• Offline task categorisation - new tasks are sorted into a stat on your device, never uploaded
+• Guided first run - a short tour that walks the earn → unlock → spend loop once, for real
 • Create custom tasks with priority and stat assignment
 • Custom rewards to redeem with earned points
 • Achievement system with built-in and custom achievements

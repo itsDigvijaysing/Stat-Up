@@ -98,15 +98,50 @@ class CategoryBackfillTest {
         assertEquals(null, stats.written)
     }
 
+    /**
+     * Progress is per chunk, not per row. Per-row reporting meant one state update - and so one
+     * recomposition - for every transaction, which is what made a long backfill janky.
+     */
     @Test
-    fun `progress is reported for every row`() = runTest {
+    fun `progress is reported once per chunk`() = runTest {
         val store = FakeEarnStore((1L..5L).map { UncategorisedEarn(it, "row $it", 1) })
         val seen = mutableListOf<Pair<Int, Int>>()
 
         CategoryBackfill(store, FakeStatsStore(PlayerStats()), FakeClassifier(emptyMap()), ImmediateTransactor)
             .run { done, total -> seen += done to total }
 
-        assertEquals(listOf(1 to 5, 2 to 5, 3 to 5, 4 to 5, 5 to 5), seen)
+        assertEquals("a single chunk reports once, at the end", listOf(5 to 5), seen)
+    }
+
+    @Test
+    fun `a run spanning several chunks reports at each boundary`() = runTest {
+        val store = FakeEarnStore((1L..120L).map { UncategorisedEarn(it, "row $it", 1) })
+        val seen = mutableListOf<Pair<Int, Int>>()
+
+        CategoryBackfill(store, FakeStatsStore(PlayerStats()), FakeClassifier(emptyMap()), ImmediateTransactor)
+            .run { done, total -> seen += done to total }
+
+        assertEquals(listOf(50 to 120, 100 to 120, 120 to 120), seen)
+    }
+
+    /**
+     * Credit is applied per chunk, so a failure part-way through leaves the completed chunks paid
+     * for. Previously every row was assigned first and all credit applied at the very end, so an
+     * interrupted run left rows categorised with nothing to show for it.
+     */
+    @Test
+    fun `credit lands per chunk rather than only at the end`() = runTest {
+        val rows = (1L..60L).map { UncategorisedEarn(it, "row $it", 5) }
+        val stats = FakeStatsStore(PlayerStats())
+
+        CategoryBackfill(
+            FakeEarnStore(rows),
+            stats,
+            FakeClassifier(rows.associate { "row ${it.id}" to StatType.STR }),
+            ImmediateTransactor
+        ).run()
+
+        assertEquals("one stats write per chunk, not one for the whole run", 2, stats.writes)
     }
 
     // ---- Fakes ----
@@ -137,8 +172,10 @@ class CategoryBackfillTest {
 
     private class FakeStatsStore(private val initial: PlayerStats) : DecayStatsStore {
         var written: PlayerStats? = null
+        /** Counts writes so per-chunk crediting can be told apart from one write at the end. */
+        var writes = 0
         override suspend fun getStatsOnce(): PlayerStats = written ?: initial
-        override suspend fun updateStats(stats: PlayerStats) { written = stats }
+        override suspend fun updateStats(stats: PlayerStats) { written = stats; writes++ }
         override suspend fun updateStreak(streak: Int) = error("backfill must not touch the streak")
         override suspend fun updateRank(rank: Rank) = error("backfill must not touch the rank")
         override suspend fun updateWorkDays(workDays: Int) = error("backfill must not touch work days")

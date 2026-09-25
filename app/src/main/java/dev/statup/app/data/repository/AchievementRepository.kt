@@ -19,6 +19,17 @@ import kotlinx.coroutines.flow.map
  */
 const val ACHIEVEMENT_REWARD_PREFIX = "Achievement reward: "
 
+/**
+ * Achievement progress, unlocking and payout.
+ *
+ * **Past payout losses are deliberately not repaired.** Builds before the award moved inside the
+ * unlock transaction could commit an unlock without its points. A one-time reconciliation would
+ * compare `titles WHERE isUnlocked = 1` against transactions carrying [ACHIEVEMENT_REWARD_PREFIX]
+ * and top up the difference. It is omitted on purpose: the window needed a purely local Room
+ * transaction to throw, so the affected population is effectively nil, and a pass that credits
+ * points is itself a double-pay risk if its matching is even slightly wrong. This is a decision,
+ * not an oversight.
+ */
 class AchievementRepository(
     private val database: AppDatabase,
     private val titleDao: TitleDao,
@@ -83,13 +94,19 @@ class AchievementRepository(
      * Update progress for [achievementId]. If the new progress crosses the target the
      * achievement is unlocked and its `rewardPoints` are awarded via [pointsAwarder].
      *
-     * The read-then-unlock-then-award sequence runs inside `database.withTransaction` so
-     * two concurrent earns that both cross the threshold (e.g. Todoist sync + a manual
-     * action in the same instant) can't both observe `isUnlocked=false` and double-award
-     * the reward. The award call itself happens outside the transaction - `pointsAwarder`
-     * goes through `PointsRepository.addPoints` which opens its own transaction; nested
-     * Room transactions are safe but holding ours open across an unrelated insert is not
-     * worth it.
+     * The read-then-unlock-then-award sequence runs inside `database.withTransaction` so two
+     * concurrent earns that both cross the threshold (e.g. Todoist sync + a manual action in the same
+     * instant) can't both observe `isUnlocked=false` and double-award the reward.
+     *
+     * **The award is inside the transaction.** It used to sit outside, on the reasoning that
+     * `pointsAwarder` opens its own transaction and holding ours across it wasn't worth it. But that
+     * left a window where the unlock committed and the payout didn't: the row reads as unlocked, so
+     * nothing ever retries it, and every caller wraps this in `runCatching`, so the user silently
+     * lost the points. Nested Room transactions are safe, which is exactly what makes this the cheap
+     * fix. Note that past losses are NOT repaired - see the class KDoc.
+     *
+     * The read-back and the celebration stay outside, after commit: firing the popup from inside
+     * would celebrate a payout that then rolled back.
      */
     suspend fun updateProgress(achievementId: String, progress: Int) {
         val unlockedNow: Int = database.withTransaction {
@@ -100,14 +117,15 @@ class AchievementRepository(
 
             if (progress >= achievement.target) {
                 titleDao.unlock(achievementId)
-                if (achievement.rewardPoints > 0) achievement.rewardPoints
+                val reward = if (achievement.rewardPoints > 0) achievement.rewardPoints
                     else Achievements.getById(achievementId)?.displayRewardPoints ?: 0
+                if (reward > 0) pointsAwarder(achievementId, reward)
+                reward
             } else 0
         }
         if (unlockedNow > 0) {
-            pointsAwarder(achievementId, unlockedNow)
-            // Read back AFTER the award so the celebration shows the unlocked row, not the
-            // pre-unlock snapshot taken inside the transaction.
+            // Read back AFTER the commit so the celebration shows the unlocked row, not the
+            // pre-unlock snapshot.
             titleDao.getById(achievementId)?.let {
                 unlockNotifier?.notify(it.toAchievement(Achievements.getById(achievementId)))
             }

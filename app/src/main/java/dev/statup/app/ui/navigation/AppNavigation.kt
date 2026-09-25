@@ -9,6 +9,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -116,6 +118,13 @@ fun AppNavigation(
         userPreferences.tutorialComplete.collect { value = it }
     }
 
+    // Nothing may act on a first-run flag until this is true: both flags default to false, which
+    // looks identical to "an install that predates them", so reading them early is what let an
+    // updating user be mistaken for a new one. StatUpApp resolves them, seeds, then opens this.
+    val firstRunResolved by produceState<Boolean?>(initialValue = null, userPreferences) {
+        userPreferences.firstRunResolved.collect { value = it }
+    }
+
     // One-time stat rebuild for installs that predate the progression change. Held in front of
     // everything so the user never watches their stats move under them mid-session.
     val upgradeRunner = koinInject<StatUpgradeRunner>()
@@ -127,8 +136,10 @@ fun AppNavigation(
     val tutorialStep by tutorialCoordinator.step.collectAsStateWithLifecycle()
     val tutorialScope = rememberCoroutineScope()
 
-    LaunchedEffect(onboarded, tutorialDone) {
-        if (onboarded == true && tutorialDone == false) tutorialCoordinator.start()
+    LaunchedEffect(onboarded, tutorialDone, firstRunResolved) {
+        if (firstRunResolved == true && onboarded == true && tutorialDone == false) {
+            tutorialCoordinator.start()
+        }
     }
 
     CompositionLocalProvider(LocalHapticsEnabled provides hapticsEnabled) {
@@ -138,12 +149,16 @@ fun AppNavigation(
                 // flashing onboarding at an already-onboarded user.
                 onboarded == null -> Box(modifier = Modifier.fillMaxSize().background(BackgroundBase))
                 onboarded == false -> OnboardingScreen()
-                tutorialDone == null -> Box(modifier = Modifier.fillMaxSize().background(BackgroundBase))
+                tutorialDone == null || firstRunResolved != true ->
+                    Box(modifier = Modifier.fillMaxSize().background(BackgroundBase))
                 else -> MainShell(
                     navController,
                     tutorialStep,
                     onTutorialAcknowledge = {
                         tutorialScope.launch { tutorialCoordinator.onAchievementAcknowledged() }
+                    },
+                    onTutorialSkip = {
+                        tutorialScope.launch { tutorialCoordinator.skip() }
                     }
                 )
             }
@@ -171,7 +186,16 @@ private fun StatUpgradeOverlay(state: StatUpgradeState) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundBase.copy(alpha = 0.97f)),
+            .background(BackgroundBase.copy(alpha = 0.97f))
+            // Swallows taps. A Box with only a background does not consume pointer events, so
+            // without this the app underneath stayed fully operable while its stats were mid-rewrite
+            // - the opposite of what a blocking progress screen is for. Same idiom as
+            // AchievementUnlockedDialog's scrim.
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {}
+            ),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -217,7 +241,8 @@ private fun StatUpgradeOverlay(state: StatUpgradeState) {
 private fun MainShell(
     navController: NavHostController,
     tutorialStep: TutorialStep? = null,
-    onTutorialAcknowledge: () -> Unit = {}
+    onTutorialAcknowledge: () -> Unit = {},
+    onTutorialSkip: () -> Unit = {}
 ) {
     // Ask for notification permission here (after onboarding), not over the intro.
     RequestNotificationPermissionOnce()
@@ -367,6 +392,7 @@ private fun MainShell(
                 isOnTargetTab = currentRoute == step.targetRoute,
                 currentRoute = currentRoute,
                 hasBottomBar = showBottomBar,
+                onSkip = onTutorialSkip,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()

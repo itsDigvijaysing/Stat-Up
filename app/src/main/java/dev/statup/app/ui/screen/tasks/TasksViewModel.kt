@@ -211,31 +211,20 @@ class TasksViewModel(
 
     fun completeMission(mission: MissionEntity) {
         viewModelScope.launch {
-            // The repository applies the double-tap race guard and marks the mission complete
-            // FIRST; it returns null if the daily mission was already completed today (no award).
+            // The repository completes the mission AND awards its points in one transaction, so a
+            // double tap cannot pay twice and a failed award cannot leave the mission marked done.
+            // Returns null when nothing was awarded (already complete, or an already-paid one-off).
             val completed = missionRepository.completeMission(mission.id) ?: return@launch
-
-            val statType = try {
-                StatType.valueOf(completed.statType)
-            } catch (e: Exception) {
-                StatType.STR
-            }
-
-            pointsRepository.addPoints(
-                points = completed.pointsReward,
-                type = TransactionType.EARN,
-                source = TransactionSource.MISSION,
-                description = "Completed: ${completed.name}",
-                statType = statType,
-                relatedId = completed.id.toString()
-            )
-
-            // Advances the guided first run's "finish a task" step, if it is running.
-            tutorialCoordinator.onTaskCompleted()
 
             // Best-effort: an achievement-check failure must not crash mission completion
             // (the mission points were already awarded atomically above).
             runCatching { achievementTracker.onPointsEarned(TransactionSource.MISSION) }
+
+            // Advances the guided first run's "finish a task" step, if it is running. This MUST run
+            // after the achievement check: the step is gated on the first-task payout having landed,
+            // and the tour tells the user that exact balance before asking them to spend it. Calling
+            // it first meant the step advanced before the 45 points existed.
+            tutorialCoordinator.onTaskCompleted(completed)
         }
     }
 

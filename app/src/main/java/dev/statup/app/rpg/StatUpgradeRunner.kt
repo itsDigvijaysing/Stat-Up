@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.asStateFlow
 interface StatUpgradeStore {
     suspend fun getStatCurveVersion(): Int
     suspend fun setStatCurveVersion(version: Int)
-    suspend fun isOnboardingComplete(): Boolean
-    suspend fun setTutorialComplete(complete: Boolean)
+    /** Off means the classifier is never consulted, so the backfill is skipped entirely. */
+    suspend fun isAutoCategoriseEnabled(): Boolean
 }
 
 /**
@@ -33,23 +33,33 @@ class StatUpgradeRunner(
     private val _state = MutableStateFlow<StatUpgradeState>(StatUpgradeState.Idle)
     val state: StateFlow<StatUpgradeState> = _state.asStateFlow()
 
-    suspend fun runIfNeeded() {
+    /**
+     * @param isFreshInstall skips all the work and just stamps the version. A brand-new install has
+     *   no history to categorise and no stats to rebuild, so the recompute would only rewrite the
+     *   singleton row with the values it already holds - and this is now the common path, not the
+     *   rare one. The tutorial flag is **not** touched here any more; `UserPreferences`
+     *   `resolveFirstRunFlags` owns that decision, and having two writers for it is what made the
+     *   old behaviour depend on which coroutine finished first.
+     */
+    suspend fun runIfNeeded(isFreshInstall: Boolean = false) {
         if (store.getStatCurveVersion() >= StatRecomputer.CURVE_VERSION) {
             _state.value = StatUpgradeState.Done
             return
         }
-        // An install that has already finished onboarding predates the tutorial, and the
-        // tutorial's flag defaults to false - without this, upgrading users would be dropped
-        // into a first-run walkthrough that awards them points they never asked for. Reaching
-        // this line with the curve version unset is exactly the "existing install" signal.
-        if (store.isOnboardingComplete()) {
-            store.setTutorialComplete(true)
+        if (isFreshInstall) {
+            store.setStatCurveVersion(StatRecomputer.CURVE_VERSION)
+            _state.value = StatUpgradeState.Done
+            return
         }
         try {
             // Only surface the progress screen once we know there is visible work to do; a
             // fresh install has nothing to categorise and must not flash an upgrade screen.
-            backfill.run { done, total ->
-                if (total > 0) _state.value = StatUpgradeState.Categorising(done, total)
+            // Skipped entirely when auto-categorisation is off: "off" has to mean the model is never
+            // consulted, and the 96 KB blob is never even read off disk.
+            if (store.isAutoCategoriseEnabled()) {
+                backfill.run { done, total ->
+                    if (total > 0) _state.value = StatUpgradeState.Categorising(done, total)
+                }
             }
             if (_state.value is StatUpgradeState.Categorising) {
                 _state.value = StatUpgradeState.Rebuilding

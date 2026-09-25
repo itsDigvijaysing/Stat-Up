@@ -132,7 +132,27 @@ val appModule = module {
 
     // Repositories
     single { PlayerRepository(get(), get()) }
-    single { MissionRepository(get(), get()) }
+    single {
+        MissionRepository(
+            missionDao = get(),
+            dayStore = get<UserPreferences>(),
+            transactor = get(),
+            awardProbe = get<PointsRepository>(),
+            // Lambda, not an injected PointsRepository: resolving it at call time keeps the Koin
+            // graph acyclic, the same reason AchievementRepository takes its awarder this way.
+            pointsAwarder = { mission ->
+                get<PointsRepository>().addPoints(
+                    points = mission.pointsReward,
+                    type = dev.statup.app.domain.model.TransactionType.EARN,
+                    source = dev.statup.app.domain.model.TransactionSource.MISSION,
+                    description = "Completed: ${mission.name}",
+                    statType = dev.statup.app.domain.model.StatType.fromString(mission.statType)
+                        ?: dev.statup.app.domain.model.StatType.STR,
+                    relatedId = mission.id.toString()
+                )
+            }
+        )
+    }
     single { PointsRepository(get(), get(), get(), get(), get(), get()) }
     // AchievementRepository takes an optional points-award lambda. We resolve PointsRepository
     // lazily through the Koin container so we don't introduce a circular dependency
@@ -195,7 +215,21 @@ val appModule = module {
         )
     }
     single { StatUpgradeRunner(get<UserPreferences>(), get(), get()) }
-    single { dev.statup.app.ui.screen.tutorial.TutorialCoordinator(get<UserPreferences>(), get()) }
+    single {
+        dev.statup.app.ui.screen.tutorial.TutorialCoordinator(
+            store = get<UserPreferences>(),
+            missionDao = get(),
+            payoutProbe = get<PointsRepository>(),
+            // Resolved lazily inside the lambda, not captured at construction: AchievementTracker
+            // depends transitively on PointsRepository, and the same trick is used for
+            // AchievementRepository's pointsAwarder above to keep the Koin graph acyclic.
+            reevaluateAchievements = {
+                get<AchievementTracker>().onPointsEarned(
+                    dev.statup.app.domain.model.TransactionSource.MISSION
+                )
+            }
+        )
+    }
 
     // ViewModels
     viewModel { StatusViewModel(get(), get(), get(), get(), get(), get(), get()) }

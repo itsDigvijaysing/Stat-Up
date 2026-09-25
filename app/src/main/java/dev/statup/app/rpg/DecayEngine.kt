@@ -45,16 +45,27 @@ class DecayEngine(
         val todayMidnight = LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli()
         val yesterdayMidnight = LocalDate.now(zone).minusDays(1)
             .atStartOfDay(zone).toInstant().toEpochMilli()
+        val tomorrowMidnight = LocalDate.now(zone).plusDays(1)
+            .atStartOfDay(zone).toInstant().toEpochMilli()
 
         // Read the activity signal and apply the day's mutation inside ONE DB transaction so a
         // concurrent earn / redeem / buy-shield (each its own transaction) can't be clobbered by
         // the full-row stats write below - which would otherwise erase a just-purchased Streak
         // Shield or freshly-earned stat points.
         val dailyResult = transactor.transaction {
+            // Authoritative idempotency check, INSIDE the transaction. The DataStore check above is
+            // only a cheap pre-filter (and a fallback for days processed by builds that predate this
+            // marker); it is written after the transaction commits, so a crash in between used to
+            // re-apply decay or burn a second Streak Shield on the retry. This marker commits with
+            // the mutation, so that window is closed.
+            if (decayLogDao.countByReasonInRange(DAY_MARKER, todayMidnight, tomorrowMidnight) > 0) {
+                return@transaction DailyDecayResult.AlreadyApplied
+            }
+
             // Check if any EARN transactions happened yesterday
             val earnedYesterday = transactionDao?.getEarnedInRange(yesterdayMidnight, todayMidnight) ?: 0
 
-            if (earnedYesterday > 0) {
+            val outcome = if (earnedYesterday > 0) {
                 // User was active, record success
                 when (val result = recordSuccessfulDay()) {
                     is StreakResult.StreakWithRankUp -> DailyDecayResult.ActiveWithRankUp(result.newRank)
@@ -82,11 +93,22 @@ class DecayEngine(
                     }
                 }
             }
+
+            // Last write of the transaction: the day is done. Committing this alongside the mutation
+            // is the whole point - either both land or neither does.
+            decayLogDao.insert(
+                DecayLogEntity(
+                    idleHours = null,
+                    reason = DAY_MARKER,
+                    createdAt = System.currentTimeMillis()
+                )
+            )
+            outcome
         }
 
-        // Mark the day done BEFORE the non-transactional side-effects. If a side-effect throws,
-        // DecayWorker retries - but this marker already guards against re-applying decay on that
-        // retry. (The marker lives in DataStore, not Room, so it can't join the transaction above.)
+        // Legacy marker, kept for one reason: a day processed by a build that predates the Room
+        // marker has no row in decay_log, and this is the only record that it was handled. It is no
+        // longer what guards against double-application - the in-transaction marker above is.
         dayStore.setLastDecayDay(today)
 
         // Update streak/rank achievements, then push fresh state to any home-screen widgets
@@ -188,6 +210,14 @@ class DecayEngine(
                     ?.let { (it.daysRequired - transition.workDays).coerceAtLeast(0) } ?: 0
             )
         }
+    }
+
+    companion object {
+        /**
+         * `decay_log.reason` for the per-day bookkeeping row. Distinct from the decay reasons
+         * (`daily_idle`) so a decay-history UI can filter these synthetic rows out.
+         */
+        const val DAY_MARKER = "day_processed"
     }
 }
 

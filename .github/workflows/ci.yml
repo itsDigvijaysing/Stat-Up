@@ -50,12 +50,18 @@ jobs:
             db:
               - 'app/src/main/java/dev/statup/app/data/local/db/**'
               - 'app/schemas/**'
+              # Rollback and SQL-condition behaviour can only be proven against real SQLite, so
+              # those tests live in androidTest. Without these paths the emulator job skips on a PR
+              # and the guards land unverified.
+              - 'app/src/androidTest/**'
+              - 'app/src/main/java/dev/statup/app/data/repository/**'
+              - 'app/src/main/java/dev/statup/app/rpg/**'
 
   instrumented:
-    name: Instrumented tests (Room migrations)
+    name: Instrumented tests (migrations, rollbacks, SQL guards)
     needs: [ unit, changes ]
-    # Run the emulator only when the DB layer/schemas changed, or on pushes to main.
-    # The data-loss-critical MigrationTest lives here.
+    # Run the emulator when the DB layer, repositories, engines or androidTest changed, or on main.
+    # MigrationTest plus the rollback/SQL-condition tests that need real SQLite live here.
     if: ${{ github.ref == 'refs/heads/main' || needs.changes.outputs.db == 'true' }}
     runs-on: ubuntu-latest
     steps:

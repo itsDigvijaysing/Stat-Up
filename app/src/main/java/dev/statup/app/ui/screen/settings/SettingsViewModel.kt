@@ -231,7 +231,10 @@ class SettingsViewModel(
             // clearAll() already dropped the "seeded" flag, but re-seeding here means the
             // tabs aren't empty until the next process start.
             StarterContentSeeder.seed(database, missionDao, rewardDao)
-            userPreferences.setStarterContentSeeded(true)
+            // Re-open the first-run gate in this process. clearAll() wiped it, and the resolver only
+            // runs at app start, so without this the UI would sit on a blank frame until the user
+            // force-quit. Also marks the tour done and stamps the stat curve - see markResetComplete.
+            userPreferences.markResetComplete(dev.statup.app.rpg.StatRecomputer.CURVE_VERSION)
         }
     }
 }

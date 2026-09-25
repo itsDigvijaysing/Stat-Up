@@ -7,6 +7,7 @@ import dev.statup.app.data.local.db.dao.RewardDao
 import dev.statup.app.data.local.db.entity.MissionEntity
 import dev.statup.app.data.local.db.entity.RewardEntity
 import dev.statup.app.domain.model.StatType
+import kotlinx.coroutines.flow.first
 
 /**
  * Seeds one starter mission per stat and a 50 → 1000 reward ladder, so the Tasks and Rewards
@@ -42,6 +43,18 @@ object StarterContentSeeder {
 
     private const val MISSION_POINTS = 4
 
+    /**
+     * The cheapest reward on the ladder - the one the guided tutorial steers the user toward, and
+     * the only one they can afford at the end of it.
+     *
+     * Derived from [REWARDS] rather than restated, because the tutorial's arithmetic has zero
+     * slack: the tutorial task plus the first-task achievement must cover this exactly. See
+     * `TutorialArithmeticTest`, which fails if a change to any of the three breaks the loop.
+     */
+    private val cheapestReward get() = REWARDS.minBy { it.cost }
+    val CHEAPEST_REWARD_NAME: String get() = cheapestReward.name
+    val CHEAPEST_REWARD_COST: Int get() = cheapestReward.cost
+
     /** Seeds once per install. Safe to call on every app start. */
     suspend fun seedIfNeeded(
         database: AppDatabase,
@@ -54,11 +67,26 @@ object StarterContentSeeder {
         userPreferences.setStarterContentSeeded(true)
     }
 
-    /** Unconditional seed - used after `clearAllTables()` during a full reset. */
+    /**
+     * Seeds anything missing. Used after `clearAllTables()` during a full reset, and as the body of
+     * [seedIfNeeded].
+     *
+     * Skips entries that already exist **by name**, so a crash between this transaction committing
+     * and the flag being written cannot duplicate all 13 items on the next launch. Writing the flag
+     * first would be worse - a crash there would mean the user never gets starter content at all.
+     * Same name-keyed approach `TutorialCoordinator` uses for its own mission, for the same reason.
+     *
+     * Consequence worth knowing: a user-created item sharing a starter name suppresses that starter
+     * entry. Unreachable on today's paths - existing installs never seed, and fresh installs and full
+     * resets both seed before any user content can exist - but it is a real property of matching on
+     * names rather than ids.
+     */
     suspend fun seed(database: AppDatabase, missionDao: MissionDao, rewardDao: RewardDao) {
         val now = System.currentTimeMillis()
         database.withTransaction {
-            MISSIONS.forEach {
+            val existingMissions = missionDao.getAllMissions().first().mapTo(mutableSetOf()) { it.name }
+            val existingRewards = rewardDao.getAll().first().mapTo(mutableSetOf()) { it.name }
+            MISSIONS.filterNot { it.name in existingMissions }.forEach {
                 missionDao.insert(
                     MissionEntity(
                         name = it.name,
@@ -71,7 +99,7 @@ object StarterContentSeeder {
                     )
                 )
             }
-            REWARDS.forEach {
+            REWARDS.filterNot { it.name in existingRewards }.forEach {
                 rewardDao.insert(
                     RewardEntity(
                         name = it.name,

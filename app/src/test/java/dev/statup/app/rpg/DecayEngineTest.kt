@@ -46,6 +46,49 @@ class DecayEngineTest {
     }
 
     @Test
+    fun `a handled day writes its marker inside the transaction`() = runTest {
+        val log = FakeDecayLogDao()
+        engine(FakeStatsStore(PlayerStats(strStat = 50)), FakeDayStore(), log).applyDailyDecay()
+
+        assertEquals("exactly one bookkeeping row for the day", 1, log.markerRows.size)
+    }
+
+    /**
+     * The crash window: the old guard was a DataStore key written *after* the transaction committed,
+     * so a process death in between meant the next run saw no marker and applied the day twice -
+     * a second stat point lost, or a second Streak Shield burned. The Room marker commits with the
+     * mutation, so an empty DataStore key is no longer enough to re-run it.
+     */
+    @Test
+    fun `a second run with no DataStore marker is still a no-op`() = runTest {
+        val stats = FakeStatsStore(PlayerStats(strStat = 50))
+        val log = FakeDecayLogDao()
+        engine(stats, FakeDayStore(), log).applyDailyDecay()
+        val writesAfterFirstRun = stats.updatedStats.size
+
+        // Fresh day store = the marker write that never landed.
+        val second = engine(stats, FakeDayStore(), log).applyDailyDecay()
+
+        assertTrue("the Room marker catches it", second is DailyDecayResult.AlreadyApplied)
+        assertEquals("no second mutation", writesAfterFirstRun, stats.updatedStats.size)
+        assertEquals("and no second marker row", 1, log.markerRows.size)
+    }
+
+    @Test
+    fun `an active day is marked too, not just a decayed one`() = runTest {
+        val log = FakeDecayLogDao()
+        engine(
+            FakeStatsStore(PlayerStats(strStat = 50)),
+            FakeDayStore(),
+            log,
+            earnedYesterday = 12
+        ).applyDailyDecay()
+
+        assertEquals("otherwise an active day could be replayed", 1, log.markerRows.size)
+        assertEquals("and it is not a decay row", 0, log.decayRows.size)
+    }
+
+    @Test
     fun `idle day with a shield consumes one shield and skips decay`() = runTest {
         val stats = FakeStatsStore(PlayerStats(strStat = 50, streakShields = 2, rankUpStreakCounter = 20))
         val day = FakeDayStore()
@@ -83,9 +126,9 @@ class DecayEngineTest {
         assertEquals("others untouched", 7, after.vitStat)
         assertEquals("one work day lost", 14, after.workDays)
         assertEquals("streak reset on idle decay", 0, after.streak)
-        assertEquals("decay row written", 1, log.inserts)
-        assertEquals("row attributes the loss to INT", 1, log.lastRow!!.intLost)
-        assertEquals(0, log.lastRow!!.wisLost)
+        assertEquals("decay row written", 1, log.decayRows.size)
+        assertEquals("row attributes the loss to INT", 1, log.lastDecayRow!!.intLost)
+        assertEquals(0, log.lastDecayRow!!.wisLost)
     }
 
     @Test
@@ -97,7 +140,7 @@ class DecayEngineTest {
 
         assertEquals(DailyDecayResult.IdleDay(0), result)
         assertEquals("no stat falls below base", PlayerStats.BASE_STAT, stats.stats!!.strStat)
-        assertEquals("nothing lost → no decay row", 0, log.inserts)
+        assertEquals("nothing lost → no decay row", 0, log.decayRows.size)
         assertEquals("the work day is still lost", 14, stats.stats!!.workDays)
     }
 
@@ -177,13 +220,23 @@ class DecayEngineTest {
         override suspend fun <R> transaction(block: suspend () -> R): R = block()
     }
 
+    /**
+     * Stores rows so the in-transaction day marker actually works. The engine now writes a synthetic
+     * `day_processed` row per handled day alongside any decay row, so the two are kept apart here -
+     * [decayRows] is what the loss assertions care about.
+     */
     private class FakeDecayLogDao : DecayLogDao {
-        var inserts = 0
-        var lastRow: DecayLogEntity? = null
+        val rows = mutableListOf<DecayLogEntity>()
+        val decayRows get() = rows.filter { it.reason != DecayEngine.DAY_MARKER }
+        val markerRows get() = rows.filter { it.reason == DecayEngine.DAY_MARKER }
+        val lastDecayRow get() = decayRows.lastOrNull()
+
         override fun getAll(): Flow<List<DecayLogEntity>> = error("unused")
         override fun getRecent(limit: Int): Flow<List<DecayLogEntity>> = error("unused")
+        override suspend fun countByReasonInRange(reason: String, start: Long, end: Long): Int =
+            rows.count { it.reason == reason && it.createdAt >= start && it.createdAt < end }
         override suspend fun insert(log: DecayLogEntity): Long {
-            inserts++; lastRow = log; return inserts.toLong()
+            rows.add(log); return rows.size.toLong()
         }
         override suspend fun deleteAll() = error("unused")
     }
@@ -198,6 +251,8 @@ class DecayEngineTest {
         override fun getByDateRange(startTime: Long, endTime: Long): Flow<List<TransactionEntity>> = error("unused")
         override suspend fun getByExternalId(externalId: String): TransactionEntity? = error("unused")
         override suspend fun getActiveEarnDays(): List<String> = error("unused")
+        override suspend fun countByDescription(description: String): Int = error("unused")
+        override suspend fun countMissionAwards(missionId: String): Int = error("unused")
         override suspend fun deleteByDescriptionPrefix(prefix: String) = error("unused")
         override suspend fun getLifetimePointsForStat(statType: String): Int = error("unused")
         override suspend fun getUncategorisedEarns(): List<TransactionEntity> = error("unused")

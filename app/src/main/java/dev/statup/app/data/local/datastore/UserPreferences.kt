@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import dev.statup.app.quotes.DailyQuoteStore
+import dev.statup.app.data.repository.MissionResetDayStore
 import dev.statup.app.rpg.DecayDayStore
 import dev.statup.app.rpg.StatUpgradeStore
 import dev.statup.app.ui.screen.tutorial.TutorialStore
@@ -24,7 +25,12 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "us
  * Implements [DailyQuoteStore] - the narrow slice QuoteRepository needs (source setting +
  * day-keyed quote cache) - so the repository stays unit-testable without a Context.
  */
-class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayStore, StatUpgradeStore, TutorialStore {
+class UserPreferences(private val context: Context) :
+    DailyQuoteStore,
+    DecayDayStore,
+    StatUpgradeStore,
+    TutorialStore,
+    MissionResetDayStore {
 
     private val secretStorage = SecretStorage(context)
 
@@ -57,6 +63,10 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
         // Starter missions/rewards are seeded once and never again - deleting the samples
         // must be permanent, so this is a flag rather than an "is the table empty" check.
         val STARTER_CONTENT_SEEDED = booleanPreferencesKey("starter_content_seeded")
+        // Set once the "is this a brand-new install?" question has been answered and the flags
+        // above written accordingly. The UI waits on this, so first-run state is never read while
+        // it is still being decided - see resolveFirstRunFlags.
+        val FIRST_RUN_RESOLVED = booleanPreferencesKey("first_run_resolved")
         // Version of the stat curve the stored stats were built with. Bumping the constant
         // triggers exactly one rebuild of every stat from lifetime points.
         val STAT_CURVE_VERSION = intPreferencesKey("stat_curve_version")
@@ -122,13 +132,24 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
         return geminiApiKeyFlow.value
     }
 
+    /**
+     * Moves a plaintext secret out of DataStore and into encrypted storage.
+     *
+     * Order matters and so does durability: write encrypted, confirm it can be read back, and only
+     * then delete the plaintext. The previous version deleted first, so a failure in between
+     * destroyed the token outright - and a plain `apply()` write would not even have reported one.
+     * The realistic failure is a Keystore flake, which is not hypothetical here:
+     * `SecretStorage.openWithRecovery` exists precisely because those happen right after boot, which
+     * is exactly when `loadSecretsIfNeeded()` runs.
+     *
+     * On any failure the plaintext is left in place and returned, so the next launch retries.
+     */
     private suspend fun migrateLegacySecret(legacyKey: Preferences.Key<String>, secretKey: String): String? {
-        // Read first (DataStore Flow), then edit to remove. Two-step to avoid the
-        // captured-var-smart-cast pitfall when reading values written inside edit{}.
         val legacy = context.dataStore.data.first()[legacyKey]
         if (legacy.isNullOrBlank()) return null
-        context.dataStore.edit { it.remove(legacyKey) }
-        secretStorage.putString(secretKey, legacy)
+        val stored = secretStorage.putStringDurable(secretKey, legacy) &&
+            secretStorage.getString(secretKey) == legacy
+        if (stored) context.dataStore.edit { it.remove(legacyKey) }
         return legacy
     }
 
@@ -178,7 +199,7 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
         }
     }
 
-    override suspend fun isOnboardingComplete(): Boolean =
+    suspend fun isOnboardingComplete(): Boolean =
         context.dataStore.data.first()[Keys.ONBOARDING_COMPLETE] ?: false
 
     override suspend fun setTutorialComplete(complete: Boolean) {
@@ -192,6 +213,61 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
         context.dataStore.edit { it[Keys.STARTER_CONTENT_SEEDED] = seeded }
     }
 
+    /** Gate the UI waits on before acting on any first-run flag. */
+    val firstRunResolved: Flow<Boolean> =
+        context.dataStore.data.map { it[Keys.FIRST_RUN_RESOLVED] ?: false }
+
+    /**
+     * Decides once, per install, whether this is a brand-new user, and writes the first-run flags to
+     * match. Runs before anything reads them.
+     *
+     * `tutorial_complete` and `starter_content_seeded` both default to `false`, which is
+     * indistinguishable from "an install that predates them". Left alone, every updating user is
+     * treated as new: 13 sample items appear in their lists and the tutorial tries to start. Worse,
+     * the flags were written asynchronously from two different places while the UI was already
+     * reading them, so the outcome came down to which coroutine won.
+     *
+     * [isFreshInstall] comes from `firstInstallTime == lastUpdateTime`. The `onboardingComplete`
+     * term covers the one case that gets wrong: someone who installs, never opens the app, then
+     * updates and opens it for the first time has diverging timestamps but is genuinely new, and
+     * would otherwise be denied the tutorial.
+     *
+     * Deciding is separate from [markFirstRunResolved] so the caller can seed the starter content in
+     * between - the gate opens only once there is something to show.
+     */
+    suspend fun resolveFirstRunFlags(isFreshInstall: Boolean) {
+        context.dataStore.edit { prefs ->
+            if (prefs[Keys.FIRST_RUN_RESOLVED] == true) return@edit
+            val fresh = FirstRunPolicy.isFirstRun(isFreshInstall, prefs[Keys.ONBOARDING_COMPLETE])
+            if (!fresh) {
+                prefs[Keys.TUTORIAL_COMPLETE] = true
+                prefs[Keys.STARTER_CONTENT_SEEDED] = true
+            }
+        }
+    }
+
+    suspend fun markFirstRunResolved() {
+        context.dataStore.edit { it[Keys.FIRST_RUN_RESOLVED] = true }
+    }
+
+    /**
+     * Post-reset first-run state, written in one edit.
+     *
+     * A full reset clears every key, including the gate - and it happens in the same process, long
+     * after [resolveFirstRunFlags] ran at startup. Without this the UI would sit behind the gate on a
+     * blank frame until the user force-quit. Someone who deliberately wipes their data knows the app,
+     * so the tour is marked done rather than replayed, and the stat curve is stamped because there is
+     * no history left to rebuild from.
+     */
+    suspend fun markResetComplete(statCurveVersion: Int) {
+        context.dataStore.edit {
+            it[Keys.STARTER_CONTENT_SEEDED] = true
+            it[Keys.TUTORIAL_COMPLETE] = true
+            it[Keys.STAT_CURVE_VERSION] = statCurveVersion
+            it[Keys.FIRST_RUN_RESOLVED] = true
+        }
+    }
+
     override suspend fun getStatCurveVersion(): Int =
         context.dataStore.data.first()[Keys.STAT_CURVE_VERSION] ?: 0
 
@@ -199,7 +275,7 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
         context.dataStore.edit { it[Keys.STAT_CURVE_VERSION] = version }
     }
 
-    suspend fun isAutoCategoriseEnabled(): Boolean =
+    override suspend fun isAutoCategoriseEnabled(): Boolean =
         context.dataStore.data.first()[Keys.AUTO_CATEGORISE] ?: true
 
     suspend fun setAutoCategorise(enabled: Boolean) {
@@ -216,9 +292,9 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
         context.dataStore.edit { it[Keys.LAST_DECAY_DAY] = day }
     }
 
-    suspend fun getLastMissionResetDay(): String? = context.dataStore.data.first()[Keys.LAST_MISSION_RESET_DAY]
+    override suspend fun getLastMissionResetDay(): String? = context.dataStore.data.first()[Keys.LAST_MISSION_RESET_DAY]
 
-    suspend fun setLastMissionResetDay(day: String) {
+    override suspend fun setLastMissionResetDay(day: String) {
         context.dataStore.edit { it[Keys.LAST_MISSION_RESET_DAY] = day }
     }
 

@@ -72,6 +72,17 @@ class HashedLinearTaskClassifier(
      */
     private fun featurise(tokens: List<String>, buckets: Int): Features {
         val dense = FloatArray(buckets)
+        // Touched buckets are recorded as they are first written, rather than found afterwards by
+        // scanning all 16384 slots. A few words touch a few hundred of them, so the scan was ~98% of
+        // the work in this function. The arrays stay per-call on purpose: this class is a Koin
+        // singleton and the two stat pickers, the Todoist sync worker and the category backfill can
+        // all score concurrently, so shared scratch buffers would corrupt scores non-deterministically.
+        val indices = IntArray(buckets)
+        var count = 0
+        fun bump(bucket: Int, by: Float) {
+            if (dense[bucket] == 0f) indices[count++] = bucket
+            dense[bucket] += by
+        }
 
         for (token in tokens) {
             val padded = " $token "
@@ -87,27 +98,23 @@ class HashedLinearTaskClassifier(
                     } else {
                         bucketOf(padded.substring(i, i + n), buckets)
                     }
-                    dense[bucket] += 1f
+                    bump(bucket, 1f)
                 }
             }
         }
         for (token in tokens) {
-            dense[bucketOf("W#$token", buckets)] += WORD_WEIGHT
+            bump(bucketOf("W#$token", buckets), WORD_WEIGHT)
         }
         for (i in 0 until tokens.size - 1) {
-            dense[bucketOf("W#${tokens[i]}_${tokens[i + 1]}", buckets)] += WORD_WEIGHT
+            bump(bucketOf("W#${tokens[i]}_${tokens[i + 1]}", buckets), WORD_WEIGHT)
         }
 
-        // Single pass: collect the touched buckets and the norm together.
-        var count = 0
+        // Norm over the touched buckets only - same result as the full scan, since every untouched
+        // slot contributes zero.
         var sumSquares = 0.0
-        val indices = IntArray(buckets)
-        for (b in 0 until buckets) {
-            val v = dense[b]
-            if (v != 0f) {
-                indices[count++] = b
-                sumSquares += (v * v).toDouble()
-            }
+        for (i in 0 until count) {
+            val v = dense[indices[i]]
+            sumSquares += (v * v).toDouble()
         }
         return Features(dense, indices, count, sqrt(sumSquares).toFloat())
     }
