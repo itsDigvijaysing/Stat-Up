@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -268,9 +269,14 @@ private fun MainShell(
     // LocalHazeState provider, or hazeEffectOrFallback finds no state and silently skips
     // the blur, leaving only a dim.
     val unlockNotifier = koinInject<AchievementUnlockNotifier>()
-    var pendingUnlock by remember { mutableStateOf<Achievement?>(null) }
+    // A QUEUE, not a single slot. Unlocks can land together - a first Todoist sync crossing several
+    // task-count thresholds at once, or a rank-up arriving with a points milestone - and the collect
+    // loop drains the channel without suspending between events, so assigning to one slot meant
+    // every celebration but the last was silently swallowed. They are shown one after another.
+    val unlockQueue = remember { mutableStateListOf<Achievement>() }
+    val pendingUnlock = unlockQueue.firstOrNull()
     LaunchedEffect(unlockNotifier) {
-        unlockNotifier.events.collect { pendingUnlock = it }
+        unlockNotifier.events.collect { unlockQueue += it }
     }
 
 
@@ -372,10 +378,11 @@ private fun MainShell(
             AchievementUnlockedDialog(
                 achievement = unlocked,
                 onDismiss = {
-                    pendingUnlock = null
-                    // Dismissing the celebration IS the tutorial's achievement step; it is a
-                    // no-op at every other time.
-                    onTutorialAcknowledge()
+                    if (unlockQueue.isNotEmpty()) unlockQueue.removeAt(0)
+                    // Dismissing the celebration IS the tutorial's achievement step; it is a no-op
+                    // at every other time. Held until the queue drains so a pile-up of unlocks does
+                    // not advance the tour out from under the ones still waiting to be shown.
+                    if (unlockQueue.isEmpty()) onTutorialAcknowledge()
                 },
                 // Measured, not guessed: the strip's height depends on how long the step's copy
                 // wraps, so a constant here would silently stop clearing it the next time the
