@@ -74,8 +74,9 @@ private fun DataSharingDisclosure() {
         Text(
             text = "Connecting the AI Coach turns off offline-only mode for this feature. " +
                 "Each time you send a message, your message and a snapshot of your player " +
-                "state — name, rank, streak, six stat values, total points, last 5 earns and " +
-                "up to 4 active missions — are sent over HTTPS to Google's Gemini API so the " +
+                "state — name, rank, work days, streak, six stat values and their average, total " +
+                "points, last 5 earns and up to 4 active missions — are sent over HTTPS to " +
+                "Google's Gemini API so the " +
                 "reply can reference your progress.\n\n" +
                 "Nothing is sent until you send a message, and disconnecting stops it " +
                 "immediately. Google handles this data under its own privacy policy.",
@@ -209,6 +210,19 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // Preferences Section
+        // Offline re-categorisation of completed tasks that never got a stat. Sits with the
+        // task integrations because that is where uncategorised history comes from.
+        SettingsSection(title = "Task Categories") {
+            AssignCategoriesCard(
+                uncategorised = uiState.uncategorisedTasks,
+                state = uiState.backfill,
+                onRun = { viewModel.assignMissingCategories() },
+                onDismiss = { viewModel.dismissBackfillResult() }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         SettingsSection(title = "Preferences") {
             // Hexagon Style Selector
             GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -334,6 +348,38 @@ fun SettingsScreen(
 
         // About Section
         SettingsSection(title = "About") {
+            // The full plain-language explainer. Testers never found the per-tab `?` dialogs,
+            // so the complete rules also need a findable home.
+            GlassCard(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { navController.navigate(Routes.HOW_IT_WORKS) }
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "📖", fontSize = 24.sp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "How It Works",
+                            color = TextPrimary,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = Inter
+                        )
+                        Text(
+                            text = "Points, stats, work days and ranks — in plain English",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            fontFamily = Inter
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text(
@@ -1049,6 +1095,114 @@ private fun ResetConfirmationDialog(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * "Assign missing categories" — runs the offline classifier over completed tasks that have no
+ * stat, showing live progress. Disabled when there is nothing to do, so the row doubles as a
+ * status readout.
+ */
+@Composable
+private fun AssignCategoriesCard(
+    uncategorised: Int,
+    state: BackfillUiState,
+    onRun: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val running = state is BackfillUiState.Running
+    val clickable = !running && uncategorised > 0
+
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = if (clickable) onRun else null
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "🏷️", fontSize = 24.sp)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Assign missing categories",
+                        color = if (clickable) TextPrimary else TextSecondary,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = Inter
+                    )
+                    Text(
+                        text = when {
+                            running -> "Working…"
+                            uncategorised > 0 ->
+                                "$uncategorised completed task${if (uncategorised == 1) "" else "s"} have no stat yet"
+                            else -> "Every completed task already has a stat"
+                        },
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        fontFamily = Inter
+                    )
+                }
+                if (running) {
+                    CircularProgressIndicator(
+                        color = AccentPrimary,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            when (state) {
+                is BackfillUiState.Running -> {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    val progress = if (state.total > 0) state.done.toFloat() / state.total else 0f
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        color = AccentPrimary,
+                        trackColor = GlassFill,
+                        modifier = Modifier.fillMaxWidth().height(4.dp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Categorising… ${state.done} / ${state.total}",
+                        color = TextTertiary,
+                        fontSize = 11.sp,
+                        fontFamily = Inter
+                    )
+                }
+                is BackfillUiState.Finished -> {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = if (state.categorised > 0) {
+                            "${state.categorised} of ${state.scanned} task" +
+                                "${if (state.scanned == 1) "" else "s"} categorised. " +
+                                "The rest were too unclear to guess — set those by hand."
+                        } else {
+                            "Couldn't confidently categorise any of the ${state.scanned} " +
+                                "remaining tasks. Set those by hand."
+                        },
+                        color = PointsGold,
+                        fontSize = 12.sp,
+                        fontFamily = Inter
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    GlassButton(text = "OK", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
+                }
+                is BackfillUiState.Failed -> {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = state.message,
+                        color = AccentError,
+                        fontSize = 12.sp,
+                        fontFamily = Inter
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    GlassButton(text = "OK", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
+                }
+                BackfillUiState.Idle -> Unit
             }
         }
     }

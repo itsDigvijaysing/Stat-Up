@@ -54,6 +54,8 @@ val RankC = Color(0xFF66BB6A)
 val RankB = Color(0xFF42A5F5)
 val RankA = Color(0xFFAB47BC)
 val RankS = Color(0xFFFFD740)
+// EX sits above S: a cold cyan-white so it reads as "past gold" rather than more gold.
+val RankEX = Color(0xFF00E5FF)
 
 // Glass
 val GlassFill = Color.White.copy(alpha = 0.10f)

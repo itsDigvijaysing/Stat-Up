@@ -8,7 +8,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -143,20 +145,25 @@ fun StatusWindow(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Footer — compact row with streak, points, rank progress
+        // Footer — compact row with streak, points, Work Days
         StatusFooter(
             streak = stats.streak,
-            starLines = stats.rankUpStreakCounter,
+            workDays = stats.workDays,
+            nextRank = stats.rank.nextRank(),
             availablePoints = availablePoints,
             onHistoryClick = onHistoryClick
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Both promotion requirements, always visible, with the blocking one marked.
+        RankProgressBlock(stats = stats)
     }
 
     // Rank Info Dialog
     if (showRankInfo) {
         RankInfoDialog(
-            currentRank = stats.rank,
-            starLines = stats.rankUpStreakCounter,
+            stats = stats,
             onDismiss = { showRankInfo = false }
         )
     }
@@ -188,14 +195,11 @@ private fun StatusHeader() {
 @Composable
 private fun StatusFooter(
     streak: Int,
-    starLines: Int,
+    workDays: Int,
+    nextRank: Rank?,
     availablePoints: Int,
     onHistoryClick: () -> Unit = {}
 ) {
-    // Star lines: compact inline display
-    val filledLines = starLines.coerceIn(0, 5)
-    val starDisplay = "★".repeat(filledLines) + "☆".repeat(5 - filledLines)
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -213,10 +217,11 @@ private fun StatusFooter(
             highlight = true,
             onClick = onHistoryClick
         )
+        // At the top rank there is nothing left to count toward, so show the banked total.
         FooterItem(
             emoji = "⭐",
-            label = "Rank Up",
-            value = "$filledLines / 5"
+            label = "Work Days",
+            value = if (nextRank != null) "$workDays / ${nextRank.daysRequired}" else "$workDays"
         )
     }
 }
@@ -227,7 +232,6 @@ private fun FooterItem(
     label: String,
     value: String,
     highlight: Boolean = false,
-    isStarLine: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
     Column(
@@ -253,19 +257,110 @@ private fun FooterItem(
         )
         Text(
             text = value,
-            color = if (highlight) PointsGold else if (isStarLine) PointsGold else TextPrimary,
-            fontSize = if (isStarLine) 10.sp else 12.sp,
-            fontWeight = if (highlight || isStarLine) FontWeight.Bold else FontWeight.SemiBold,
+            color = if (highlight) PointsGold else TextPrimary,
+            fontSize = 12.sp,
+            fontWeight = if (highlight) FontWeight.Bold else FontWeight.SemiBold,
+            fontFamily = Inter
+        )
+    }
+}
+
+/**
+ * Shows BOTH promotion requirements at once and marks which one is blocking. The old display
+ * was five stars off a single counter, which couldn't express "your days are there but your
+ * stats aren't" — the exact state most users sit in.
+ */
+@Composable
+fun RankProgressBlock(
+    stats: PlayerStats,
+    modifier: Modifier = Modifier
+) {
+    val next = stats.rank.nextRank()
+    val shape = RoundedCornerShape(12.dp)
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(AccentPrimary.copy(alpha = 0.07f))
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        if (next == null) {
+            Text(
+                text = "Rank ${stats.rank.name} — top of the ladder",
+                color = PointsGold,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = Inter
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${stats.workDays} work days banked",
+                color = TextSecondary,
+                fontSize = 12.sp,
+                fontFamily = Inter
+            )
+            return@Column
+        }
+
+        Text(
+            text = "Rank ${stats.rank.name} → ${next.name}",
+            color = TextPrimary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = Inter
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        RequirementRow(
+            label = "Work days",
+            have = stats.workDays,
+            need = next.daysRequired
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        RequirementRow(
+            label = "Avg stat",
+            have = stats.averageStat().toInt(),
+            need = next.statsRequired
+        )
+    }
+}
+
+@Composable
+private fun RequirementRow(label: String, have: Int, need: Int) {
+    val met = have >= need
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            color = TextSecondary,
+            fontSize = 12.sp,
             fontFamily = Inter,
-            letterSpacing = if (isStarLine) 1.sp else 0.sp
+            modifier = Modifier.width(78.dp)
+        )
+        Text(
+            text = "$have / $need",
+            color = if (met) AccentSuccess else TextPrimary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = Inter,
+            modifier = Modifier.width(64.dp)
+        )
+        Text(
+            text = if (met) "✓" else "${need - have} more",
+            color = if (met) AccentSuccess else AccentWarning,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = Inter
         )
     }
 }
 
 @Composable
 private fun RankInfoDialog(
-    currentRank: Rank,
-    starLines: Int,
+    stats: PlayerStats,
     onDismiss: () -> Unit
 ) {
     Dialog(
@@ -286,6 +381,7 @@ private fun RankInfoDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(16.dp)
                 ) {
                     Text(
@@ -296,71 +392,104 @@ private fun RankInfoDialog(
                         fontFamily = Inter
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = "Your progress is tracked by Star Lines (★). " +
-                                "Each active day adds a line, each idle day removes one.",
-                        color = TextSecondary,
-                        fontSize = 14.sp,
-                        fontFamily = Inter
-                    )
-
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "★★★★★ = Rank Up!\n" +
-                                "Lines below 0 = Rank Down",
+                        text = "Every day you earn any points is a work day. Miss a day and you " +
+                            "lose one work day plus one point from your highest stat.",
+                        color = TextSecondary,
+                        fontSize = 13.sp,
+                        fontFamily = Inter,
+                        lineHeight = 18.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Work days never reset when you rank up — they keep adding up, so " +
+                            "the longer you go the safer your rank gets.",
                         color = PointsGold,
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        fontFamily = Inter
+                        fontFamily = Inter,
+                        lineHeight = 18.sp
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Rank list
+                    // Column headers for the requirements table.
+                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+                        Spacer(modifier = Modifier.width(20.dp))
+                        Text(
+                            text = "Rank",
+                            color = TextTertiary,
+                            fontSize = 10.sp,
+                            fontFamily = Inter,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "Days",
+                            color = TextTertiary,
+                            fontSize = 10.sp,
+                            fontFamily = Inter,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.width(44.dp)
+                        )
+                        Text(
+                            text = "Avg stat",
+                            color = TextTertiary,
+                            fontSize = 10.sp,
+                            fontFamily = Inter,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.width(56.dp)
+                        )
+                    }
+
                     Rank.entries.reversed().forEach { rank ->
-                        val isCurrent = rank == currentRank
+                        val isCurrent = rank == stats.rank
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = if (isCurrent) "▸" else "  ",
+                                text = if (isCurrent) "▸" else " ",
                                 color = rank.color,
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.width(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Rank ${rank.name}",
+                                text = "${rank.name}  ${rank.title}",
                                 color = if (isCurrent) rank.color else TextSecondary,
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                                 fontFamily = Inter,
-                                modifier = Modifier.width(60.dp)
+                                modifier = Modifier.weight(1f)
                             )
                             Text(
-                                text = rank.title,
+                                text = if (rank == Rank.E) "—" else "${rank.daysRequired}",
                                 color = if (isCurrent) TextPrimary else TextTertiary,
-                                fontSize = 14.sp,
-                                fontFamily = Inter
+                                fontSize = 13.sp,
+                                fontFamily = Inter,
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.width(44.dp)
+                            )
+                            Text(
+                                text = if (rank == Rank.E) "—" else "${rank.statsRequired}",
+                                color = if (isCurrent) TextPrimary else TextTertiary,
+                                fontSize = 13.sp,
+                                fontFamily = Inter,
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.width(56.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    val linesDisplay = starLines.coerceIn(0, 5)
-                    Text(
-                        text = "Current: ${"★".repeat(linesDisplay)}${"☆".repeat(5 - linesDisplay)} (${starLines}/5)",
-                        color = TextPrimary,
-                        fontSize = 14.sp,
-                        fontFamily = Inter
-                    )
+                    RankProgressBlock(stats = stats)
 
                     Spacer(modifier = Modifier.height(20.dp))
 

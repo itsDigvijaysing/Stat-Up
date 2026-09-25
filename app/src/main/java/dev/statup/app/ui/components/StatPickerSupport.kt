@@ -1,0 +1,96 @@
+package dev.statup.app.ui.components
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import dev.statup.app.ai.classifier.StatSuggestion
+import dev.statup.app.ai.classifier.TaskClassifier
+import dev.statup.app.data.repository.PointsRepository
+import dev.statup.app.domain.model.StatType
+import dev.statup.app.ui.theme.AccentPrimary
+import dev.statup.app.ui.theme.Inter
+import dev.statup.app.ui.theme.TextTertiary
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
+
+/**
+ * Debounced offline guess at which stat [text] belongs to.
+ *
+ * Returns `null` while typing, when the text is too short to mean anything, and whenever the
+ * model isn't confident — in which case the caller must keep whatever the picker already had.
+ * Scoring is sub-millisecond but the asset load on first use is not, so it runs off the main
+ * thread.
+ */
+@Composable
+fun rememberStatSuggestion(text: String): StatSuggestion? {
+    val classifier = koinInject<TaskClassifier>()
+    var suggestion by remember { mutableStateOf<StatSuggestion?>(null) }
+
+    LaunchedEffect(text) {
+        val trimmed = text.trim()
+        if (trimmed.length < MIN_CHARS_TO_CLASSIFY) {
+            suggestion = null
+            return@LaunchedEffect
+        }
+        // Debounce: re-scoring on every keystroke is wasted work and makes the chip flicker
+        // between stats while a sentence is still being typed.
+        delay(DEBOUNCE_MS)
+        suggestion = withContext(Dispatchers.Default) { classifier.classify(trimmed) }
+    }
+
+    return suggestion
+}
+
+/** The user's configured default stat, used to seed a picker before any guess arrives. */
+@Composable
+fun rememberDefaultStat(): StatType {
+    val pointsRepository = koinInject<PointsRepository>()
+    var stat by remember { mutableStateOf(StatType.STR) }
+    LaunchedEffect(Unit) { stat = pointsRepository.getDefaultStat() }
+    return stat
+}
+
+/**
+ * One caption line under a stat picker: what the selected stat actually means, plus a marker
+ * when the app chose it rather than the user. Nothing in the app defined the stats before, so
+ * users were picking from six three-letter codes with no explanation.
+ */
+@Composable
+fun StatPickerCaption(
+    stat: StatType,
+    isSuggested: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        if (isSuggested) {
+            Text(
+                text = "✨ Suggested — tap another to change",
+                color = AccentPrimary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = Inter
+            )
+        }
+        Text(
+            text = "${stat.displayName}: ${stat.blurb}",
+            color = TextTertiary,
+            fontSize = 11.sp,
+            fontFamily = Inter
+        )
+    }
+}
+
+private const val DEBOUNCE_MS = 300L
+// Below three words the training set measured 35-42% accurate, so short text is not scored.
+private const val MIN_CHARS_TO_CLASSIFY = 8

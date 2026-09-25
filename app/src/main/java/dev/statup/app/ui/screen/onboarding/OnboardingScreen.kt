@@ -57,7 +57,7 @@ private val steps = listOf(
     OnboardingStep(
         Icons.Outlined.AutoGraph,
         "Level up six stats",
-        "Completing tasks and missions earns points that raise STR, INT, WIS, DEX, CHA and VIT. Keep a daily streak to climb the ranks E → S. Skip days and your stats slowly decay — so keep showing up."
+        "Completing tasks and missions earns points that raise STR, INT, WIS, DEX, CHA and VIT. Every day you earn something is a work day, and work days plus your average stat carry you up the ranks E → EX. Miss a day and you lose a work day and a point off your highest stat — so keep showing up."
     ),
     OnboardingStep(
         Icons.Outlined.CardGiftcard,

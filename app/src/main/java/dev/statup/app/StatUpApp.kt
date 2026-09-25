@@ -3,12 +3,16 @@ package dev.statup.app
 import android.app.Application
 import android.util.Log
 import dev.statup.app.data.local.datastore.UserPreferences
+import dev.statup.app.data.local.db.StarterContentSeeder
 import dev.statup.app.data.local.db.StatMappingSeeder
+import dev.statup.app.data.local.db.dao.MissionDao
+import dev.statup.app.data.local.db.dao.RewardDao
 import dev.statup.app.data.local.db.dao.StatMappingDao
 import dev.statup.app.data.repository.AchievementRepository
 import dev.statup.app.data.repository.PlayerRepository
 import dev.statup.app.di.appModule
 import dev.statup.app.notifications.Notifier
+import dev.statup.app.rpg.StatUpgradeRunner
 import dev.statup.app.widget.StatsWidgetUpdater
 import org.koin.android.ext.android.get
 import dev.statup.app.sync.DecayWorker
@@ -55,10 +59,22 @@ class StatUpApp : Application() {
         // (`by inject()` would defer construction until first access.)
         get<Notifier>()
 
-        appScope.launch { playerRepository.initializeStats() }
         appScope.launch { achievementRepository.initializeAchievements() }
         appScope.launch { StatMappingSeeder.seedIfEmpty(database, statMappingDao) }
         appScope.launch { userPreferences.loadSecretsIfNeeded() }
+
+        // Starter missions + rewards, once per install, so Tasks and Rewards never open empty.
+        appScope.launch {
+            StarterContentSeeder.seedIfNeeded(database, get<MissionDao>(), get<RewardDao>(), userPreferences)
+        }
+
+        // One-time upgrade for pre-rebalance installs: categorise uncategorised history, then
+        // rebuild every stat on the new curve. Must run AFTER initializeStats() has guaranteed
+        // the singleton row exists, so it is chained onto that launch rather than racing it.
+        appScope.launch {
+            playerRepository.initializeStats()
+            get<StatUpgradeRunner>().runIfNeeded()
+        }
 
         // Refresh any installed home-screen widget with the current DB state. The system also
         // calls onUpdate on install/boot; this covers app-open after background data changes.

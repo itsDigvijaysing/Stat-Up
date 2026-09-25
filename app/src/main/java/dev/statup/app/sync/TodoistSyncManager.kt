@@ -1,5 +1,6 @@
 package dev.statup.app.sync
 
+import dev.statup.app.ai.classifier.TaskClassifier
 import dev.statup.app.data.local.datastore.UserPreferences
 import dev.statup.app.data.repository.PointsRepository
 import dev.statup.app.domain.model.TransactionSource
@@ -11,7 +12,8 @@ class TodoistSyncManager(
     private val todoistApi: TodoistApi,
     private val userPreferences: UserPreferences,
     private val pointsRepository: PointsRepository,
-    private val achievementTracker: AchievementTracker
+    private val achievementTracker: AchievementTracker,
+    private val taskClassifier: TaskClassifier
 ) {
 
     suspend fun syncCompletedTasks(): SyncResult {
@@ -37,6 +39,11 @@ class TodoistSyncManager(
                 onSuccess = { tasks ->
                     // Cache stat mappings once per sync (avoid N round trips for N tasks)
                     val mappingsCache = pointsRepository.loadStatMappings()
+                    // Resolved at most once per sync run, and only if a labelled task actually
+                    // needs it (it is a DataStore read, not free).
+                    var cachedDefaultStat: dev.statup.app.domain.model.StatType? = null
+                    suspend fun defaultStat() =
+                        cachedDefaultStat ?: pointsRepository.getDefaultStat().also { cachedDefaultStat = it }
                     var pointsEarned = 0
                     var tasksProcessed = 0
 
@@ -46,11 +53,15 @@ class TodoistSyncManager(
 
                         val points = StatsEngine.calculateTaskPoints(completedTask.priority)
                         val labels = completedTask.labels
-                        val statType = if (labels.isNotEmpty()) {
-                            pointsRepository.routeToStatCached(labels, mappingsCache)
-                        } else {
-                            null
-                        }
+                        // Resolution order: a Todoist label the user mapped wins outright;
+                        // otherwise the offline classifier reads the task title. An unlabelled
+                        // task used to arrive with statType = null — the points landed in the
+                        // balance and grew no stat at all. When the model isn't confident the
+                        // behaviour is unchanged from before, so this can only add stats,
+                        // never mis-assign one that was previously correct.
+                        val statType = pointsRepository.routeByLabel(labels, mappingsCache)
+                            ?: taskClassifier.classify(completedTask.content)?.stat
+                            ?: if (labels.isNotEmpty()) defaultStat() else null
 
                         // tryEarnExternalPoints handles dedup atomically via the unique index
                         // on transactions.externalId — returns null if this task was already synced.

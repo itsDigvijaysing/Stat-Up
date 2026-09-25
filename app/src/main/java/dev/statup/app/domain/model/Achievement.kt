@@ -71,6 +71,7 @@ object Achievements {
         Achievement("rank_b", "B-Rank Hunter", "Reach B Rank", "⭐", AchievementCategory.RANK, 3, rewardPoints = 150),
         Achievement("rank_a", "A-Rank Hunter", "Reach A Rank", "⭐", AchievementCategory.RANK, 4, rewardPoints = 300),
         Achievement("rank_s", "S-Rank Hunter", "Reach S Rank", "👑", AchievementCategory.RANK, 5, rewardPoints = 600),
+        Achievement("rank_ex", "Beyond the Ladder", "Reach EX Rank", "🔱", AchievementCategory.RANK, 6, rewardPoints = 1200),
 
         // Special
         Achievement("first_reward", "Treat Yourself", "Redeem your first reward", "🎁", AchievementCategory.SPECIAL, 1, rewardPoints = 20),

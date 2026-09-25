@@ -27,6 +27,9 @@ import dev.statup.app.domain.model.PlayerStats
 import dev.statup.app.domain.model.StatType
 import dev.statup.app.domain.model.TransactionSource
 import dev.statup.app.ui.components.glass.GlassCard
+import dev.statup.app.ui.components.HelpDialog
+import dev.statup.app.ui.components.HelpIconButton
+import dev.statup.app.ui.components.HelpPoint
 import dev.statup.app.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 import java.time.format.TextStyle
@@ -38,6 +41,16 @@ fun StatsScreen(
     viewModel: StatsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showHelp by remember { mutableStateOf(false) }
+
+    if (showHelp) {
+        HelpDialog(
+            title = "Your Stats",
+            intro = "The detail view: where your points went and how close each stat is to its next point.",
+            points = STATS_HELP,
+            onDismiss = { showHelp = false }
+        )
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -46,7 +59,7 @@ fun StatsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            StatsHeader()
+            StatsHeader(onHelp = { showHelp = true })
         }
 
         // Overall summary
@@ -93,7 +106,7 @@ fun StatsScreen(
 }
 
 @Composable
-private fun StatsHeader() {
+private fun StatsHeader(onHelp: () -> Unit) {
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
         elevated = true
@@ -109,7 +122,7 @@ private fun StatsHeader() {
                 fontSize = 32.sp
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Detailed Stats",
                     color = TextPrimary,
@@ -124,6 +137,7 @@ private fun StatsHeader() {
                     fontFamily = Inter
                 )
             }
+            HelpIconButton(onClick = onHelp)
         }
     }
 }
@@ -466,7 +480,7 @@ private fun StatAccumulatorSection(stats: PlayerStats, selectedStat: StatType?) 
                 fontFamily = Inter
             )
             Text(
-                text = "Every 10 points earned = +1 stat point",
+                text = "Every ${PlayerStats.POINTS_PER_STAT} points earned = +1 stat point",
                 color = TextTertiary,
                 fontSize = 11.sp,
                 fontFamily = Inter
@@ -477,7 +491,9 @@ private fun StatAccumulatorSection(stats: PlayerStats, selectedStat: StatType?) 
             statsToShow.forEach { statType ->
                 val accumulator = stats.getStatAccumulator(statType)
                 val currentStat = stats.getStat(statType)
-                val progress = accumulator.toFloat() / PlayerStats.POINTS_PER_STAT
+                // Coerced: a maxed stat freezes its accumulator, which can sit at or above
+                // POINTS_PER_STAT and would otherwise drive the bar past full width.
+                val progress = (accumulator.toFloat() / PlayerStats.POINTS_PER_STAT).coerceIn(0f, 1f)
 
                 Row(
                     modifier = Modifier
@@ -524,7 +540,7 @@ private fun StatAccumulatorSection(stats: PlayerStats, selectedStat: StatType?) 
                     }
 
                     Text(
-                        text = "$accumulator/10",
+                        text = "$accumulator/${PlayerStats.POINTS_PER_STAT}",
                         color = TextTertiary,
                         fontSize = 11.sp,
                         fontFamily = Inter,
@@ -597,3 +613,19 @@ private fun SourceRow(
         }
     }
 }
+
+private val STATS_HELP = listOf(
+    HelpPoint(
+        "Progress bars",
+        "Each bar shows how many points you've banked toward that stat's next point.",
+        "${dev.statup.app.domain.model.PlayerStats.POINTS_PER_STAT} points fills one bar"
+    ),
+    HelpPoint(
+        "Average stat gates your rank",
+        "Ranking up needs a minimum average across all six, so a single maxed stat won't carry you."
+    ),
+    HelpPoint(
+        "Top sources",
+        "Where your points actually come from — useful for spotting a stat you never train."
+    )
+)

@@ -16,5 +16,8 @@ object Routes {
     /** Play's User Data policy requires the privacy policy to be reachable inside the app. */
     const val PRIVACY_POLICY = "privacy_policy"
 
+    /** Plain-language explainer of the whole system, reached from Settings → About. */
+    const val HOW_IT_WORKS = "how_it_works"
+
     fun editReward(rewardId: Long) = "edit_reward/$rewardId"
 }

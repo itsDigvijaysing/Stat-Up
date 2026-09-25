@@ -97,7 +97,7 @@ class Notifier(private val context: Context) {
             id = NOTIF_RANK_UP,
             channel = CHANNEL_REMINDERS,
             title = "Rank up — $rankName! 🎉",
-            body = "Five active days paid off. Open Stat Up to see your new status."
+            body = "Your work days and stats both cleared the bar. Open Stat Up to see your new status."
         )
     }
 

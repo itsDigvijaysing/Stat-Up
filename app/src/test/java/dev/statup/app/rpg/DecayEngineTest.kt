@@ -47,7 +47,7 @@ class DecayEngineTest {
 
     @Test
     fun `idle day with a shield consumes one shield and skips decay`() = runTest {
-        val stats = FakeStatsStore(PlayerStats(strStat = 50, streakShields = 2))
+        val stats = FakeStatsStore(PlayerStats(strStat = 50, streakShields = 2, rankUpStreakCounter = 20))
         val day = FakeDayStore()
 
         val result = engine(stats, day, earnedYesterday = 0).applyDailyDecay()
@@ -55,26 +55,42 @@ class DecayEngineTest {
         assertEquals(DailyDecayResult.ShieldConsumed(shieldsLeft = 1), result)
         assertEquals("shield decremented", 1, stats.stats!!.streakShields)
         assertEquals("stat NOT decayed", 50, stats.stats!!.strStat)
+        assertEquals("work days untouched", 20, stats.stats!!.workDays)
         assertEquals("idempotency marker advanced", LocalDate.now().toString(), day.lastDay)
     }
 
     @Test
-    fun `idle day without a shield decays stats above base and logs it`() = runTest {
-        val stats = FakeStatsStore(PlayerStats(strStat = 10, rank = Rank.D, rankUpStreakCounter = 3))
+    fun `idle day takes one point from the single highest stat only`() = runTest {
+        // INT is the highest; every other stat above base must be left alone. The old model
+        // took a point from all six at once, which dug a six-day hole per missed day.
+        val stats = FakeStatsStore(
+            PlayerStats(
+                strStat = 20, intStat = 31, wisStat = 30, dexStat = 12,
+                chaStat = 9, vitStat = 7, rank = Rank.D, rankUpStreakCounter = 15
+            )
+        )
         val log = FakeDecayLogDao()
 
         val result = engine(stats, FakeDayStore(), log, earnedYesterday = 0).applyDailyDecay()
 
-        assertTrue(result is DailyDecayResult.IdleDay)
-        assertEquals("one stat point lost", 1, (result as DailyDecayResult.IdleDay).statsLost)
-        assertEquals("str decremented by 1", 9, stats.stats!!.strStat)
-        assertEquals("streak reset on idle decay", 0, stats.stats!!.streak)
+        assertEquals(DailyDecayResult.IdleDay(1), result)
+        val after = stats.stats!!
+        assertEquals("highest stat decremented", 30, after.intStat)
+        assertEquals("others untouched", 20, after.strStat)
+        assertEquals("others untouched", 30, after.wisStat)
+        assertEquals("others untouched", 12, after.dexStat)
+        assertEquals("others untouched", 9, after.chaStat)
+        assertEquals("others untouched", 7, after.vitStat)
+        assertEquals("one work day lost", 14, after.workDays)
+        assertEquals("streak reset on idle decay", 0, after.streak)
         assertEquals("decay row written", 1, log.inserts)
+        assertEquals("row attributes the loss to INT", 1, log.lastRow!!.intLost)
+        assertEquals(0, log.lastRow!!.wisLost)
     }
 
     @Test
     fun `decay floors at base — no loss and no log row when already at base`() = runTest {
-        val stats = FakeStatsStore(PlayerStats(rank = Rank.D, rankUpStreakCounter = 3)) // all at BASE_STAT
+        val stats = FakeStatsStore(PlayerStats(rank = Rank.D, rankUpStreakCounter = 15)) // all at BASE_STAT
         val log = FakeDecayLogDao()
 
         val result = engine(stats, FakeDayStore(), log, earnedYesterday = 0).applyDailyDecay()
@@ -82,19 +98,51 @@ class DecayEngineTest {
         assertEquals(DailyDecayResult.IdleDay(0), result)
         assertEquals("no stat falls below base", PlayerStats.BASE_STAT, stats.stats!!.strStat)
         assertEquals("nothing lost → no decay row", 0, log.inserts)
+        assertEquals("the work day is still lost", 14, stats.stats!!.workDays)
     }
 
     @Test
-    fun `active day increments streak and advances the rank-up counter`() = runTest {
-        val stats = FakeStatsStore(PlayerStats(streak = 3, rank = Rank.D, rankUpStreakCounter = 1))
+    fun `idle day that drops below the rank requirement demotes`() = runTest {
+        // B needs 30 work days. Sitting exactly on the line, one miss falls to C.
+        val stats = FakeStatsStore(PlayerStats(strStat = 40, rank = Rank.B, rankUpStreakCounter = 30))
+
+        val result = engine(stats, FakeDayStore(), earnedYesterday = 0).applyDailyDecay()
+
+        assertEquals(DailyDecayResult.IdleWithRankDown(Rank.C), result)
+        assertEquals(Rank.C, stats.stats!!.rank)
+        assertEquals(29, stats.stats!!.workDays)
+    }
+
+    @Test
+    fun `active day increments streak and banks a work day`() = runTest {
+        // Average stat is still at base 5, below D's gate of 6, so no promotion yet.
+        val stats = FakeStatsStore(PlayerStats(streak = 3, rank = Rank.E, rankUpStreakCounter = 10))
         val day = FakeDayStore()
 
         val result = engine(stats, day, earnedYesterday = 4).applyDailyDecay()
 
         assertTrue(result is DailyDecayResult.ActiveDay)
         assertEquals("streak +1", 4, stats.lastStreak)
-        assertEquals("rank-up counter advanced", 2, stats.lastCounter)
+        assertEquals("work day banked", 11, stats.lastWorkDays)
+        assertEquals("no promotion while the stat gate is unmet", null, stats.lastRank)
         assertEquals("idempotency marker advanced", LocalDate.now().toString(), day.lastDay)
+    }
+
+    @Test
+    fun `active day promotes when both gates are met and keeps the banked days`() = runTest {
+        // Six stats at 10 → average 10, above C's gate of 14? No. Above D's 6? Yes.
+        val stats = FakeStatsStore(
+            PlayerStats(
+                strStat = 10, intStat = 10, wisStat = 10, dexStat = 10, chaStat = 10, vitStat = 10,
+                streak = 5, rank = Rank.E, rankUpStreakCounter = 6
+            )
+        )
+
+        val result = engine(stats, FakeDayStore(), earnedYesterday = 4).applyDailyDecay()
+
+        assertEquals(DailyDecayResult.ActiveWithRankUp(Rank.D), result)
+        assertEquals(Rank.D, stats.lastRank)
+        assertEquals("promotion does NOT reset the counter", 7, stats.lastWorkDays)
     }
 
     // ---- Fakes ----
@@ -103,15 +151,21 @@ class DecayEngineTest {
         val updatedStats = mutableListOf<PlayerStats>()
         var lastStreak: Int? = null
         var lastRank: Rank? = null
-        var lastCounter: Int? = null
+        var lastWorkDays: Int? = null
         override suspend fun getStatsOnce(): PlayerStats? = stats
         override suspend fun updateStats(stats: PlayerStats) {
             this.stats = stats
             updatedStats.add(stats)
         }
         override suspend fun updateStreak(streak: Int) { lastStreak = streak }
-        override suspend fun updateRank(rank: Rank) { lastRank = rank }
-        override suspend fun updateRankUpCounter(counter: Int) { lastCounter = counter }
+        override suspend fun updateRank(rank: Rank) {
+            lastRank = rank
+            stats = stats?.copy(rank = rank)
+        }
+        override suspend fun updateWorkDays(workDays: Int) {
+            lastWorkDays = workDays
+            stats = stats?.copy(rankUpStreakCounter = workDays)
+        }
     }
 
     private class FakeDayStore(var lastDay: String? = null) : DecayDayStore {
@@ -125,9 +179,12 @@ class DecayEngineTest {
 
     private class FakeDecayLogDao : DecayLogDao {
         var inserts = 0
+        var lastRow: DecayLogEntity? = null
         override fun getAll(): Flow<List<DecayLogEntity>> = error("unused")
         override fun getRecent(limit: Int): Flow<List<DecayLogEntity>> = error("unused")
-        override suspend fun insert(log: DecayLogEntity): Long { inserts++; return inserts.toLong() }
+        override suspend fun insert(log: DecayLogEntity): Long {
+            inserts++; lastRow = log; return inserts.toLong()
+        }
         override suspend fun deleteAll() = error("unused")
     }
 
@@ -140,6 +197,11 @@ class DecayEngineTest {
         override fun getByStatType(statType: String): Flow<List<TransactionEntity>> = error("unused")
         override fun getByDateRange(startTime: Long, endTime: Long): Flow<List<TransactionEntity>> = error("unused")
         override suspend fun getByExternalId(externalId: String): TransactionEntity? = error("unused")
+        override suspend fun getActiveEarnDays(): List<String> = error("unused")
+        override suspend fun getLifetimePointsForStat(statType: String): Int = error("unused")
+        override suspend fun getUncategorisedEarns(): List<TransactionEntity> = error("unused")
+        override suspend fun assignStatTypeIfMissing(id: Long, statType: String): Int = error("unused")
+        override fun countUncategorisedEarns(): Flow<Int> = error("unused")
         override suspend fun getTotalEarned(): Int? = error("unused")
         override suspend fun getTotalRedeemed(): Int? = error("unused")
         override fun getBalance(): Flow<Int> = error("unused")

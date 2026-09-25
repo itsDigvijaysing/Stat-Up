@@ -10,6 +10,15 @@ import dev.statup.app.domain.model.Achievements
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+/**
+ * Points paid out by an unlocked achievement are tagged with this prefix. They are an EARN with
+ * no stat — a payout, not a task — so the classifier backfill filters them out by it. Change the
+ * literal here and in [dev.statup.app.data.local.db.dao.TransactionDao] together, or the backfill
+ * will start offering to categorise achievement payouts and its "remaining" count will never
+ * reach zero.
+ */
+const val ACHIEVEMENT_REWARD_PREFIX = "Achievement reward: "
+
 class AchievementRepository(
     private val database: AppDatabase,
     private val titleDao: TitleDao,

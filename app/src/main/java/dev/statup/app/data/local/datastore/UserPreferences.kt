@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import dev.statup.app.quotes.DailyQuoteStore
 import dev.statup.app.rpg.DecayDayStore
+import dev.statup.app.rpg.StatUpgradeStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +23,7 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "us
  * Implements [DailyQuoteStore] — the narrow slice QuoteRepository needs (source setting +
  * day-keyed quote cache) — so the repository stays unit-testable without a Context.
  */
-class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayStore {
+class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayStore, StatUpgradeStore {
 
     private val secretStorage = SecretStorage(context)
 
@@ -42,6 +43,14 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
         val SHOW_DECAY_ANIMATIONS = booleanPreferencesKey("show_decay_animations")
         val HAPTIC_FEEDBACK = booleanPreferencesKey("haptic_feedback")
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
+        // Guided tutorial that runs once after onboarding, before the main shell unlocks.
+        val TUTORIAL_COMPLETE = booleanPreferencesKey("tutorial_complete")
+        // Starter missions/rewards are seeded once and never again — deleting the samples
+        // must be permanent, so this is a flag rather than an "is the table empty" check.
+        val STARTER_CONTENT_SEEDED = booleanPreferencesKey("starter_content_seeded")
+        // Version of the stat curve the stored stats were built with. Bumping the constant
+        // triggers exactly one rebuild of every stat from lifetime points.
+        val STAT_CURVE_VERSION = intPreferencesKey("stat_curve_version")
         val HEXAGON_STYLE = stringPreferencesKey("hexagon_style")
         // Local-date string (yyyy-MM-dd) of the most recent successful DecayEngine run.
         // Guards against double-application when WorkManager retries, runNow() fires,
@@ -66,6 +75,7 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
     val showDecayAnimations: Flow<Boolean> = context.dataStore.data.map { it[Keys.SHOW_DECAY_ANIMATIONS] ?: true }
     val hapticFeedback: Flow<Boolean> = context.dataStore.data.map { it[Keys.HAPTIC_FEEDBACK] ?: true }
     val onboardingComplete: Flow<Boolean> = context.dataStore.data.map { it[Keys.ONBOARDING_COMPLETE] ?: false }
+    val tutorialComplete: Flow<Boolean> = context.dataStore.data.map { it[Keys.TUTORIAL_COMPLETE] ?: false }
     val hexagonStyle: Flow<String> = context.dataStore.data.map { it[Keys.HEXAGON_STYLE] ?: "simple" }
     val lastDecayDay: Flow<String?> = context.dataStore.data.map { it[Keys.LAST_DECAY_DAY] }
     val quoteSource: Flow<String> = context.dataStore.data.map { it[Keys.QUOTE_SOURCE] ?: "OFFLINE" }
@@ -148,6 +158,27 @@ class UserPreferences(private val context: Context) : DailyQuoteStore, DecayDayS
 
     suspend fun setOnboardingComplete(complete: Boolean) {
         context.dataStore.edit { it[Keys.ONBOARDING_COMPLETE] = complete }
+    }
+
+    override suspend fun isOnboardingComplete(): Boolean =
+        context.dataStore.data.first()[Keys.ONBOARDING_COMPLETE] ?: false
+
+    override suspend fun setTutorialComplete(complete: Boolean) {
+        context.dataStore.edit { it[Keys.TUTORIAL_COMPLETE] = complete }
+    }
+
+    suspend fun isStarterContentSeeded(): Boolean =
+        context.dataStore.data.first()[Keys.STARTER_CONTENT_SEEDED] ?: false
+
+    suspend fun setStarterContentSeeded(seeded: Boolean) {
+        context.dataStore.edit { it[Keys.STARTER_CONTENT_SEEDED] = seeded }
+    }
+
+    override suspend fun getStatCurveVersion(): Int =
+        context.dataStore.data.first()[Keys.STAT_CURVE_VERSION] ?: 0
+
+    override suspend fun setStatCurveVersion(version: Int) {
+        context.dataStore.edit { it[Keys.STAT_CURVE_VERSION] = version }
     }
 
     suspend fun setHexagonStyle(style: String) {

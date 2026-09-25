@@ -48,8 +48,8 @@ class PlayerRepository(
         playerStatsDao.updateRank(rank.name)
     }
 
-    override suspend fun updateRankUpCounter(counter: Int) {
-        playerStatsDao.updateRankUpCounter(counter)
+    override suspend fun updateWorkDays(workDays: Int) {
+        playerStatsDao.updateWorkDays(workDays)
     }
 
     suspend fun addTotalPoints(points: Int) {

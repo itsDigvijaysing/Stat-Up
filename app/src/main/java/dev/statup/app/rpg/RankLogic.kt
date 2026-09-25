@@ -1,66 +1,82 @@
 package dev.statup.app.rpg
 
 import dev.statup.app.domain.model.Rank
+import java.time.LocalDate
 
 /**
- * Pure functions for the star-line counter model. Extracted from [DecayEngine] so the
- * transition rules are testable without all the DB / preferences plumbing.
+ * Pure transition rules for the cumulative Work Day model. Extracted from [DecayEngine] so
+ * they are testable without the DB / preferences plumbing.
  *
- * Counter mental model (asymmetric by design):
- *   - Each active day: counter `+1`.
- *   - Each idle day: counter `-1`.
- *   - Counter `>= +STREAK_DAYS_TO_RANK_UP` → rank up, counter resets to `0` at the new rank.
- *     Going up takes 5 hard days of work.
- *   - Counter `< 0` (i.e. dropped to `-1`) → rank down immediately (if not already at floor),
- *     counter resets to `+STREAK_DAYS_TO_RANK_UP` at the lower rank. The +5 reset is a
- *     "near-miss" cushion: one active day at the lower rank (counter `+5 → +6 ≥ 5`) bounces
- *     you straight back up.
- *   - At rank E (no previous rank) the counter floors at `0` — no infinite negative
- *     accumulation, so the first active day always starts climbing toward D.
+ * Mental model:
+ *   - Each active day: Work Days `+1`. Each idle day: `-1`, floored at 0.
+ *   - **Work Days are never reset.** Promotion keeps the banked total, so the safety margin
+ *     against demotion grows the longer the user works — no day-after-promotion cliff.
+ *   - Promotion needs BOTH requirements: `workDays >= rank.daysRequired` and
+ *     `averageStat >= rank.statsRequired`.
+ *   - Demotion looks at days only ([Rank.highestByDays]). Stat decay must never demote,
+ *     or a single missed day would punish twice.
  *
- * Concrete walkthrough (matches the documented design):
- *   - At D with counter `+1`: 1 idle → 0 (still D), 2 idle → -1 → demote to E with counter +5.
- *   - At D with counter `0` (just promoted): 1 idle → -1 → demote to E with counter +5.
- *   - At E with counter `+5` (just demoted): 1 active → counter +6 ≥ 5 → re-promote to D.
+ * Because both directions are a lookup over [Rank], a jump of more than one rank resolves in
+ * one step — which is what the one-time stat recompute needs.
  */
 object RankLogic {
 
     sealed class Transition {
-        data class CounterUpdated(val newCounter: Int) : Transition()
-        data class RankUp(val newRank: Rank) : Transition() {
-            val newCounter: Int = 0
-        }
-        data class RankDown(val newRank: Rank) : Transition() {
-            val newCounter: Int = Rank.STREAK_DAYS_TO_RANK_UP
-        }
+        abstract val workDays: Int
+
+        data class DaysUpdated(override val workDays: Int) : Transition()
+        data class RankUp(val newRank: Rank, override val workDays: Int) : Transition()
+        data class RankDown(val newRank: Rank, override val workDays: Int) : Transition()
     }
 
-    fun applyActiveDay(currentCounter: Int, currentRank: Rank): Transition {
-        val next = currentCounter + 1
-        val nextRank = currentRank.nextRank()
-        return if (next >= Rank.STREAK_DAYS_TO_RANK_UP && nextRank != null) {
-            Transition.RankUp(nextRank)
+    fun applyActiveDay(workDays: Int, currentRank: Rank, averageStat: Float): Transition {
+        val next = workDays + 1
+        val target = Rank.highestQualified(next, averageStat)
+        return if (target.order > currentRank.order) {
+            Transition.RankUp(target, next)
         } else {
-            // At rank S (nextRank == null) the counter has nowhere to promote to. Cap it
-            // at the threshold so it doesn't grow unbounded across years of S-tier play.
-            val capped = if (nextRank == null) {
-                next.coerceAtMost(Rank.STREAK_DAYS_TO_RANK_UP)
-            } else next
-            Transition.CounterUpdated(capped)
+            Transition.DaysUpdated(next)
         }
     }
 
-    fun applyIdleDay(currentCounter: Int, currentRank: Rank): Transition {
-        val next = currentCounter - 1
-        val prevRank = currentRank.previousRank()
-        return when {
-            next < 0 && prevRank != null ->
-                Transition.RankDown(prevRank)
-            prevRank == null && next < 0 ->
-                // At rank E: clamp at 0 since there's no rank below to fall to.
-                Transition.CounterUpdated(0)
-            else ->
-                Transition.CounterUpdated(next)
+    fun applyIdleDay(workDays: Int, currentRank: Rank): Transition {
+        val next = (workDays - 1).coerceAtLeast(0)
+        val floor = Rank.highestByDays(next)
+        return if (floor.order < currentRank.order) {
+            Transition.RankDown(floor, next)
+        } else {
+            Transition.DaysUpdated(next)
         }
+    }
+
+    /**
+     * Rank a player should hold given their banked days and stats, ignoring where they are
+     * now. Used by the one-time recompute, which must be able to move a player several ranks
+     * in either direction at once.
+     */
+    fun rankFor(workDays: Int, averageStat: Float): Rank =
+        Rank.highestQualified(workDays, averageStat)
+
+    /**
+     * Rebuilds the Work Day counter by replaying this model over a player's real history:
+     * `+1` for every day they earned something, `-1` for every day they didn't, floored at 0.
+     *
+     * Needed because the pre-v4 counter reset to 0 on each promotion and capped at 5, so it
+     * holds no recoverable history — reusing it as-is would drop every existing player to rank
+     * E no matter how long they had been playing.
+     *
+     * Replaying day by day is not the same as `2 * active - span`: the floor at 0 means a long
+     * early gap cannot mortgage later work. Counting stops at [through] (yesterday), because
+     * today has not been judged yet — tonight's tick will count it.
+     */
+    fun reconstructWorkDays(activeDays: Set<LocalDate>, through: LocalDate): Int {
+        val first = activeDays.minOrNull() ?: return 0
+        var days = 0
+        var cursor = first
+        while (!cursor.isAfter(through)) {
+            days = if (cursor in activeDays) days + 1 else (days - 1).coerceAtLeast(0)
+            cursor = cursor.plusDays(1)
+        }
+        return days
     }
 }

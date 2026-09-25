@@ -21,7 +21,8 @@ class PointsRepository(
     private val statMappingDao: StatMappingDao,
     private val userPreferences: UserPreferences,
     private val widgetUpdater: StatsWidgetUpdater? = null
-) {
+) : dev.statup.app.rpg.LifetimeStatPointsSource,
+    dev.statup.app.ai.classifier.UncategorisedEarnStore {
     val transactions: Flow<List<Transaction>> = transactionDao.getAll().map { list ->
         list.map { it.toDomain() }
     }
@@ -35,6 +36,22 @@ class PointsRepository(
     suspend fun getTotalRedeemed(): Int = transactionDao.getTotalRedeemed() ?: 0
     suspend fun getCurrentBalance(): Int = getTotalEarned() - getTotalRedeemed()
     suspend fun getTaskTransactionCount(): Int = transactionDao.getTaskTransactionCount()
+
+    override suspend fun lifetimePoints(stat: StatType): Int =
+        transactionDao.getLifetimePointsForStat(stat.name)
+
+    override suspend fun activeEarnDays(): List<String> = transactionDao.getActiveEarnDays()
+
+    override suspend fun uncategorisedEarns(): List<dev.statup.app.ai.classifier.UncategorisedEarn> =
+        transactionDao.getUncategorisedEarns().map {
+            dev.statup.app.ai.classifier.UncategorisedEarn(it.id, it.description, it.points)
+        }
+
+    override suspend fun assignStat(id: Long, stat: StatType): Boolean =
+        transactionDao.assignStatTypeIfMissing(id, stat.name) > 0
+
+    /** Live count of earns still missing a stat — drives the Settings row's subtitle. */
+    val uncategorisedCount: Flow<Int> = transactionDao.countUncategorisedEarns()
 
     /**
      * Insert the transaction, increment totals + stat accumulator. All DB writes happen
@@ -202,28 +219,9 @@ class PointsRepository(
             StatType.VIT -> stats.vitStat
         }
 
-        // If the stat is already maxed, freeze the accumulator at its current value so
-        // post-cap earns don't silently discard "would-be" stat gains. Without this
-        // clamp, every 10 points past MAX_STAT was being computed into statGain and then
-        // erased by the coerceAtMost — a leak invisible to the user.
-        val newStat: Int
-        val remainingAcc: Int
-        if (currentStat >= PlayerStats.MAX_STAT) {
-            newStat = PlayerStats.MAX_STAT
-            remainingAcc = currentAcc
-        } else {
-            val newAcc = currentAcc + points
-            val statGain = newAcc / PlayerStats.POINTS_PER_STAT
-            val uncapped = currentStat + statGain
-            newStat = uncapped.coerceAtMost(PlayerStats.MAX_STAT)
-            // If the gain would have pushed past MAX_STAT, preserve only enough remainder
-            // so the user isn't credited for points beyond the cap.
-            remainingAcc = if (uncapped <= PlayerStats.MAX_STAT) {
-                newAcc % PlayerStats.POINTS_PER_STAT
-            } else {
-                0
-            }
-        }
+        val progress = dev.statup.app.rpg.StatsEngine.applyPoints(currentStat, currentAcc, points)
+        val newStat = progress.stat
+        val remainingAcc = progress.accumulator
 
         val updatedStats = when (statType) {
             StatType.STR -> stats.copy(strStat = newStat, strPointsAcc = remainingAcc)
@@ -248,17 +246,23 @@ class PointsRepository(
     suspend fun loadStatMappings(): List<StatMappingEntity> = statMappingDao.getAllOnce()
 
     /** Routing variant that reuses a pre-loaded mappings list to avoid N DB round trips. */
-    suspend fun routeToStatCached(labels: List<String>, mappings: List<StatMappingEntity>): StatType {
+    suspend fun routeToStatCached(labels: List<String>, mappings: List<StatMappingEntity>): StatType =
+        routeByLabel(labels, mappings) ?: getDefaultStat()
+
+    /**
+     * Label routing with no fallback: returns null when no label maps to a stat, so the caller
+     * can try the offline classifier before settling for the default.
+     */
+    fun routeByLabel(labels: List<String>, mappings: List<StatMappingEntity>): StatType? {
         for (label in labels) {
             val mapping = mappings.find { it.sourceName.equals(label, ignoreCase = true) }
-            if (mapping != null) {
-                return StatType.fromString(mapping.statType) ?: getDefaultStat()
-            }
+            if (mapping != null) return StatType.fromString(mapping.statType)
         }
-        return getDefaultStat()
+        return null
     }
 
-    private suspend fun getDefaultStat(): StatType {
+    /** Internal so the create-mission / add-points dialogs can seed their picker with it. */
+    internal suspend fun getDefaultStat(): StatType {
         val defaultStatName = userPreferences.defaultStat.first()
         return StatType.fromString(defaultStatName) ?: StatType.INT
     }

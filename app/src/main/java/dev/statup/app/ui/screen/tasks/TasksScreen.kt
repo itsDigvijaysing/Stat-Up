@@ -45,9 +45,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import dev.statup.app.data.local.db.entity.MissionEntity
+import dev.statup.app.domain.model.PlayerStats
 import dev.statup.app.domain.model.StatType
 import dev.statup.app.sync.TodoistTask
 import dev.statup.app.ui.components.glass.*
+import dev.statup.app.ui.components.StatPickerCaption
+import dev.statup.app.ui.components.rememberDefaultStat
+import dev.statup.app.ui.components.rememberStatSuggestion
 import dev.statup.app.ui.components.rememberHapticTick
 import dev.statup.app.ui.components.HelpDialog
 import dev.statup.app.ui.components.HelpIconButton
@@ -553,8 +557,15 @@ private fun CreateMissionDialog(
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var points by remember { mutableStateOf("4") }
-    var selectedStat by remember { mutableStateOf(StatType.STR) }
     var isDaily by remember { mutableStateOf(true) }
+
+    // The picker used to open hardcoded on STR regardless of the task. It now starts on the
+    // user's default stat and moves to the classifier's guess until they pick one themselves —
+    // after which their choice is never overridden.
+    val defaultStat = rememberDefaultStat()
+    var pickedStat by remember { mutableStateOf<StatType?>(null) }
+    val suggestion = rememberStatSuggestion(name)
+    val selectedStat = pickedStat ?: suggestion?.stat ?: defaultStat
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -654,12 +665,19 @@ private fun CreateMissionDialog(
                             val isSelected = selectedStat == stat
                             GlassButtonSmall(
                                 text = stat.name,
-                                onClick = { selectedStat = stat },
+                                onClick = { pickedStat = stat },
                                 primary = isSelected,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    StatPickerCaption(
+                        stat = selectedStat,
+                        isSuggested = pickedStat == null && suggestion != null
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -831,8 +849,8 @@ private fun TodoistTaskCard(task: TodoistTask) {
 }
 
 private val TASKS_HELP = listOf(
-    HelpPoint("Add a mission", "Tap +, give it points, pick the stat it trains.", "\"Gym 30 min\" \u2192 5 pts to STR"),
-    HelpPoint("Finish it to earn", "Points grow that stat. 10 points = +1 stat."),
+    HelpPoint("Add a mission", "Tap +, give it points, pick the stat it trains.", "\"Gym 30 min\" \u2192 4 pts to STR"),
+    HelpPoint("Finish it to earn", "Points grow that stat. ${PlayerStats.POINTS_PER_STAT} points = +1 stat."),
     HelpPoint("Dailies reset nightly", "Tick them off each day to keep earning.")
 )
 

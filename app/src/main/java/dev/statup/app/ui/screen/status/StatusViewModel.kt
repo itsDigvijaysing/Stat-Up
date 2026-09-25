@@ -16,7 +16,6 @@ import dev.statup.app.domain.model.TransactionSource
 import dev.statup.app.domain.model.TransactionType
 import dev.statup.app.quotes.QuoteRepository
 import dev.statup.app.rpg.AchievementTracker
-import dev.statup.app.rpg.RankCalculator
 import dev.statup.app.rpg.StatsEngine
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -32,7 +31,6 @@ import java.time.ZoneId
 class StatusViewModel(
     private val playerRepository: PlayerRepository,
     private val pointsRepository: PointsRepository,
-    private val rankCalculator: RankCalculator,
     private val achievementTracker: AchievementTracker,
     private val userPreferences: UserPreferences,
     private val transactionDao: TransactionDao,
@@ -255,11 +253,6 @@ class StatusViewModel(
             // Best-effort: don't let an achievement-check failure crash the earn flow.
             runCatching { achievementTracker.onPointsEarned(TransactionSource.MANUAL) }
         }
-    }
-
-    fun getDaysToRankUp(): Int {
-        val stats = _uiState.value.stats
-        return rankCalculator.getStreakDaysToNextRank(stats)
     }
 }
 

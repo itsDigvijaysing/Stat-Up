@@ -26,9 +26,14 @@ class PlayerStatsTest {
     }
 
     @Test fun `points-per-stat invariant`() {
-        // Documents the contract: 10 points = 1 stat point gain
-        assertEquals(10, PlayerStats.POINTS_PER_STAT)
+        // Documents the contract: 5 points = 1 stat point gain
+        assertEquals(5, PlayerStats.POINTS_PER_STAT)
         assertEquals(100, PlayerStats.MAX_STAT)
         assertEquals(5, PlayerStats.BASE_STAT)
+    }
+
+    @Test fun `workDays reads the legacy counter column`() {
+        // The column kept its name so the model change needed no DB migration.
+        assertEquals(23, PlayerStats(rankUpStreakCounter = 23).workDays)
     }
 }

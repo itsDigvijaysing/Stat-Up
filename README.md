@@ -13,15 +13,21 @@ Demo: https://www.youtube.com/watch?v=gvXfM7x2DlU
 **Progression**
 - Six stats — Strength, Intelligence, Wisdom, Dexterity, Charisma, Vitality — shown on a hexagon
   radar chart, range 5–100.
-- Points convert to stats at 10 points per stat point; the remainder is carried in a per-stat
+- Points convert to stats at 5 points per stat point; the remainder is carried in a per-stat
   accumulator.
-- Rank ladder E → D → C → B → A → S driven by a single star-line counter: +1 per active day,
-  −1 per idle day. Five consecutive active days rank you up; one negative day ranks you down.
-- Daily decay at midnight: an idle day costs 1 point per stat and 1 star line.
+- Rank ladder E → D → C → B → A → S → EX gated on **both** cumulative Work Days and average
+  stat: D 7/6, C 15/14, B 30/24, A 60/36, S 120/50, EX 240/80. Work Days are +1 per active day,
+  −1 per idle day, floored at 0, and **never reset on promotion**.
+- Demotion is Work Days only — losing a stat point never costs a rank.
+- Daily decay at midnight: an idle day costs 1 Work Day and 1 point from the single highest stat.
 - Streak Freeze Shield — 30 points, max 3. An idle day consumes one instead of decaying stats.
+- First-run guided tutorial (real task → stat → reward → achievement) and a plain-language
+  "How It Works" screen under Settings → About.
 
 **Tasks**
 - Manual missions with priority P1–P4 and a stat assignment. P1=4pts, P2=3pts, P3=2pts, P4=1pt.
+- Offline stat classifier (96 KB, on-device, no network) pre-selects the stat for a typed task
+  name and fills in the stat for unlabelled Todoist tasks. Never overwrites a category you set.
 - Daily missions reset at local midnight, including when the app is never opened.
 - Optional Todoist sync — label-to-stat routing, deduplicated by task ID, runs every 15 minutes.
 
@@ -75,7 +81,7 @@ UI (Compose)          ui/screen/*, ui/components/*
 ViewModel             ui/screen/<feature>/<Feature>ViewModel.kt
 Repository            data/repository/*
 Room DAO + DataStore  data/local/db/*, data/local/datastore/*
-RPG engines           rpg/StatsEngine, DecayEngine, RankCalculator, AchievementTracker
+RPG engines           rpg/StatsEngine, DecayEngine, RankLogic, StatRecomputer, AchievementTracker
 Workers               sync/DecayWorker, sync/TodoistSyncWorker
 ```
 

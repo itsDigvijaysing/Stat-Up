@@ -4,7 +4,6 @@ import dev.statup.app.data.local.db.dao.MissionDao
 import dev.statup.app.data.local.db.dao.TransactionDao
 import dev.statup.app.data.repository.PlayerStateProvider
 import dev.statup.app.domain.model.PlayerStats
-import dev.statup.app.domain.model.Rank
 import kotlinx.coroutines.flow.first
 
 /**
@@ -54,7 +53,9 @@ class AgentContextBuilder(
         // model knows where ground-truth ends.
         return buildString {
             appendLine("Player state:")
-            appendLine("name=$userName rank=${stats.rank.name} stars=${stats.rankUpStreakCounter}/${Rank.STREAK_DAYS_TO_RANK_UP} streak=${stats.streak}d (best ${stats.longestStreak}d)")
+            val next = stats.rank.nextRank()
+            val gate = next?.let { "next=${it.name} needs ${it.daysRequired}d + avg ${it.statsRequired}" } ?: "next=none (top rank)"
+            appendLine("name=$userName rank=${stats.rank.name} workdays=${stats.workDays} avgstat=${stats.averageStat().toInt()} $gate streak=${stats.streak}d (best ${stats.longestStreak}d)")
             appendLine("stats STR=${stats.strStat} INT=${stats.intStat} WIS=${stats.wisStat} DEX=${stats.dexStat} CHA=${stats.chaStat} VIT=${stats.vitStat}  total_earned=${stats.totalPointsEarned}")
             appendLine("Recent earns:")
             appendLine(recent)
@@ -79,7 +80,11 @@ object AgentPersona {
     val SYSTEM_PROMPT = """
         You are the in-app coach for Stat Up, an RPG-themed productivity app. Six stats:
         STR (training), INT (study), WIS (reflection), DEX (skill), CHA (social), VIT (health).
-        Ranks E→D→C→B→A→S. 5 active days = rank up; counter dropping below 0 = rank down.
+        Ranks E→D→C→B→A→S→EX. Ranking up needs BOTH enough cumulative "work days" (any day
+        they earn points) AND a high enough average stat — the exact numbers are in the state
+        block below. Work days never reset on promotion. A missed day costs 1 work day and 1
+        point off their highest stat; losing stats alone never demotes them.
+        5 points earned in a stat = +1 to that stat.
 
         Style rules — follow strictly:
           - Be terse. 2-4 short sentences by default. No filler greetings, no "Sure!", no recap.

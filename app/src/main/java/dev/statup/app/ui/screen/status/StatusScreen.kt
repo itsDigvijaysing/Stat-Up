@@ -27,7 +27,13 @@ import androidx.navigation.NavController
 import dev.statup.app.domain.model.Rank
 import dev.statup.app.domain.model.StatType
 import dev.statup.app.ui.components.glass.*
+import dev.statup.app.ui.components.HelpDialog
+import dev.statup.app.ui.components.HelpIconButton
+import dev.statup.app.ui.components.HelpPoint
 import dev.statup.app.ui.components.rpg.DailyQuoteCard
+import dev.statup.app.ui.components.StatPickerCaption
+import dev.statup.app.ui.components.rememberDefaultStat
+import dev.statup.app.ui.components.rememberStatSuggestion
 import dev.statup.app.ui.components.rememberHapticTick
 import dev.statup.app.ui.components.rpg.RankUpAnimation
 import dev.statup.app.ui.components.rpg.StatusWindow
@@ -41,6 +47,7 @@ fun StatusScreen(
     viewModel: StatusViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showHelp by remember { mutableStateOf(false) }
     var showMoodDialog by remember { mutableStateOf(false) }
     var showAddPointsDialog by remember { mutableStateOf(false) }
     var showTitlePicker by remember { mutableStateOf(false) }
@@ -76,6 +83,16 @@ fun StatusScreen(
             .padding(horizontal = 16.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Help affordance — the Status tab is where a confused user lands first, so the `?`
+        // has to be reachable here too, not only on Tasks/Rewards/Agent.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HelpIconButton(onClick = { showHelp = true })
+        }
+
         // Status Window (includes points now)
         StatusWindow(
             playerName = uiState.username,
@@ -156,6 +173,15 @@ fun StatusScreen(
         }
     }
 
+    if (showHelp) {
+        HelpDialog(
+            title = "Your Status",
+            intro = "This is your character sheet. Everything you finish in the app shows up here.",
+            points = STATUS_HELP,
+            onDismiss = { showHelp = false }
+        )
+    }
+
     // Mood Check-in Dialog
     if (showMoodDialog) {
         MoodCheckInDialog(
@@ -232,7 +258,7 @@ private fun ShieldDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Skip a day without losing anything. One shield absorbs the idle " +
-                        "day automatically — no stat decay, streak and star lines intact.",
+                        "day automatically — no stat decay, streak and work days intact.",
                     color = TextSecondary,
                     fontSize = 13.sp,
                     fontFamily = Inter,
@@ -548,8 +574,14 @@ private fun AddPointsDialog(
     onAdd: (points: Int, stat: StatType, description: String) -> Unit
 ) {
     var points by remember { mutableStateOf("4") }
-    var selectedStat by remember { mutableStateOf(StatType.STR) }
     var description by remember { mutableStateOf("") }
+
+    // Same rule as the mission dialog: default stat, then the offline guess, then whatever the
+    // user picks — their pick always wins.
+    val defaultStat = rememberDefaultStat()
+    var pickedStat by remember { mutableStateOf<StatType?>(null) }
+    val suggestion = rememberStatSuggestion(description)
+    val selectedStat = pickedStat ?: suggestion?.stat ?: defaultStat
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -633,12 +665,19 @@ private fun AddPointsDialog(
                             val isSelected = selectedStat == stat
                             GlassButtonSmall(
                                 text = stat.name,
-                                onClick = { selectedStat = stat },
+                                onClick = { pickedStat = stat },
                                 primary = isSelected,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    StatPickerCaption(
+                        stat = selectedStat,
+                        isSuggested = pickedStat == null && suggestion != null
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -680,3 +719,20 @@ private fun AddPointsDialog(
         }
     }
 }
+
+private val STATUS_HELP = listOf(
+    HelpPoint(
+        "Six stats, one hexagon",
+        "Points you earn raise the stat the task belongs to.",
+        "every ${dev.statup.app.domain.model.PlayerStats.POINTS_PER_STAT} points in a stat = +1"
+    ),
+    HelpPoint(
+        "Work days drive your rank",
+        "Any day you earn points counts. They add up and never reset.",
+        "tap your rank badge for the full table"
+    ),
+    HelpPoint(
+        "Points are also currency",
+        "Spending them in the Rewards tab never lowers your stats."
+    )
+)

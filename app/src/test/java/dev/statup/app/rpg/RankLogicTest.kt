@@ -1,139 +1,154 @@
 package dev.statup.app.rpg
 
 import dev.statup.app.domain.model.Rank
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Black-box tests for the star-line counter model.
+ * Black-box tests for the cumulative Work Day model.
  *
- * Design (asymmetric on purpose):
- *   - +5 active days from counter 0 → rank up, counter resets to 0 at the new higher rank.
- *   - Counter dropping below 0 (i.e. to -1) → immediate rank down, counter resets to +5
- *     at the new lower rank.
- *   - At rank E (the floor) the counter clamps at 0.
- *   - The +5-after-demotion reset is a "near-miss" cushion: 1 active day at the lower rank
- *     bounces straight back up (counter +5 → +6, which is ≥ 5 → re-promote).
- *
- * Concrete user-described example covered below:
- *   At D with counter +1: 1 idle → 0, 2 idle → -1 → demote to E with counter +5.
+ * Contract:
+ *   - Active day: Work Days +1. Idle day: -1, floored at 0.
+ *   - Work Days are NEVER reset — promotion keeps the banked total.
+ *   - Promotion needs days AND average stat. Demotion looks at days only.
  */
 class RankLogicTest {
 
-    @Test fun `5 active days from E_0 promotes to D with counter reset to 0`() {
-        var counter = 0
-        var rank = Rank.E
-        repeat(Rank.STREAK_DAYS_TO_RANK_UP) {
-            val t = RankLogic.applyActiveDay(counter, rank)
-            when (t) {
-                is RankLogic.Transition.RankUp -> {
-                    rank = t.newRank
-                    counter = t.newCounter
-                }
-                is RankLogic.Transition.CounterUpdated -> counter = t.newCounter
-                else -> error("unexpected: $t")
-            }
-        }
-        assertEquals(Rank.D, rank)
-        assertEquals(0, counter)
+    @Test fun `promotion needs both requirements — days alone is not enough`() {
+        // D needs 7 days and avg stat 6. Six days banked, seventh day earned, but stats are
+        // still at base 5.
+        val t = RankLogic.applyActiveDay(workDays = 6, currentRank = Rank.E, averageStat = 5f)
+        assertTrue("stats below the gate must block promotion", t is RankLogic.Transition.DaysUpdated)
+        assertEquals(7, t.workDays)
     }
 
-    @Test fun `at D with counter plus1, two idle days demote and reset counter to plus5`() {
-        // Day 1 idle: +1 → 0, still at D
-        val day1 = RankLogic.applyIdleDay(1, Rank.D)
-        assertTrue(day1 is RankLogic.Transition.CounterUpdated)
-        assertEquals(0, (day1 as RankLogic.Transition.CounterUpdated).newCounter)
-
-        // Day 2 idle: 0 → -1 → demote to E, counter resets to +5
-        val day2 = RankLogic.applyIdleDay(0, Rank.D)
-        assertTrue(day2 is RankLogic.Transition.RankDown)
-        val down = day2 as RankLogic.Transition.RankDown
-        assertEquals(Rank.E, down.newRank)
-        assertEquals(Rank.STREAK_DAYS_TO_RANK_UP, down.newCounter)
+    @Test fun `promotion needs both requirements — stats alone is not enough`() {
+        val t = RankLogic.applyActiveDay(workDays = 2, currentRank = Rank.E, averageStat = 40f)
+        assertTrue("days below the gate must block promotion", t is RankLogic.Transition.DaysUpdated)
+        assertEquals(3, t.workDays)
     }
 
-    @Test fun `at D with counter 0 (just promoted), one idle day demotes immediately`() {
-        // No grace period after promotion — single idle day drops you straight back.
-        val t = RankLogic.applyIdleDay(0, Rank.D)
-        assertTrue(t is RankLogic.Transition.RankDown)
-        val down = t as RankLogic.Transition.RankDown
-        assertEquals(Rank.E, down.newRank)
-        assertEquals(Rank.STREAK_DAYS_TO_RANK_UP, down.newCounter)
-    }
-
-    @Test fun `after demotion to E with counter plus5, one active day re-promotes to D`() {
-        // Counter +5 → +6 (≥ 5) → rank up back to D, counter resets to 0
-        val t = RankLogic.applyActiveDay(Rank.STREAK_DAYS_TO_RANK_UP, Rank.E)
+    @Test fun `promotion fires when both requirements are met`() {
+        val t = RankLogic.applyActiveDay(workDays = 6, currentRank = Rank.E, averageStat = 6f)
         assertTrue(t is RankLogic.Transition.RankUp)
-        val up = t as RankLogic.Transition.RankUp
-        assertEquals(Rank.D, up.newRank)
-        assertEquals(0, up.newCounter)
+        assertEquals(Rank.D, (t as RankLogic.Transition.RankUp).newRank)
+        assertEquals(7, t.workDays)
     }
 
-    @Test fun `at rank E with counter 0, idle days clamp the counter at 0`() {
-        var counter = 0
+    @Test fun `work days survive promotion — no reset at the new rank`() {
+        // This is the whole point of the model: the day-after-promotion cliff is gone.
+        val promoted = RankLogic.applyActiveDay(14, Rank.D, averageStat = 14f)
+        assertTrue(promoted is RankLogic.Transition.RankUp)
+        assertEquals("banked days carry over", 15, promoted.workDays)
+
+        // One idle day right after promoting is survivable: 14 >= C's 15? No — but it is well
+        // above D's 7, so the fall is at most to D, not a cliff to the floor.
+        val idle = RankLogic.applyIdleDay(promoted.workDays, Rank.C)
+        assertEquals(14, idle.workDays)
+        assertTrue(idle is RankLogic.Transition.RankDown)
+        assertEquals(Rank.D, (idle as RankLogic.Transition.RankDown).newRank)
+    }
+
+    @Test fun `a comfortable margin absorbs idle days without any demotion`() {
+        // 40 days banked at B (needs 30): ten idle days in a row and the rank never moves.
+        var days = 40
         repeat(10) {
-            val t = RankLogic.applyIdleDay(counter, Rank.E)
-            assertTrue("E should clamp, never demote: $t", t is RankLogic.Transition.CounterUpdated)
-            counter = (t as RankLogic.Transition.CounterUpdated).newCounter
-            assertEquals(0, counter)
+            val t = RankLogic.applyIdleDay(days, Rank.B)
+            assertTrue("no demotion while above the requirement", t is RankLogic.Transition.DaysUpdated)
+            days = t.workDays
         }
+        assertEquals(30, days)
     }
 
-    @Test fun `at rank E with positive counter, idle days decrement until 0 then clamp`() {
-        // From E with counter +3, idle days should go 3 → 2 → 1 → 0 → 0 → 0
-        var counter = 3
-        listOf(2, 1, 0, 0, 0).forEach { expected ->
-            val t = RankLogic.applyIdleDay(counter, Rank.E)
-            counter = (t as RankLogic.Transition.CounterUpdated).newCounter
-            assertEquals(expected, counter)
-        }
+    @Test fun `losing stats never demotes — only days do`() {
+        // Sitting at A (60 days) with an average stat far below A's gate of 36.
+        val t = RankLogic.applyIdleDay(workDays = 100, currentRank = Rank.A)
+        assertTrue("stats are not consulted on the idle path", t is RankLogic.Transition.DaysUpdated)
+        assertEquals(Rank.A, Rank.highestByDays(99))
     }
 
-    @Test fun `at rank S, active days update counter but cap at STREAK_DAYS_TO_RANK_UP`() {
-        // No rank above S, so the counter just sits at the threshold instead of growing
-        // unbounded. The counter still climbs from 0 → 5; subsequent active days no-op.
-        var counter = 0
-        repeat(8) {
-            val t = RankLogic.applyActiveDay(counter, Rank.S)
-            assertTrue("S is the cap: $t", t is RankLogic.Transition.CounterUpdated)
-            counter = (t as RankLogic.Transition.CounterUpdated).newCounter
-        }
-        assertEquals(Rank.STREAK_DAYS_TO_RANK_UP, counter)
+    @Test fun `demotion is reversible by a single active day`() {
+        val down = RankLogic.applyIdleDay(workDays = 30, currentRank = Rank.B)
+        assertTrue(down is RankLogic.Transition.RankDown)
+        assertEquals(29, down.workDays)
+
+        val back = RankLogic.applyActiveDay(down.workDays, Rank.C, averageStat = 30f)
+        assertTrue(back is RankLogic.Transition.RankUp)
+        assertEquals(Rank.B, (back as RankLogic.Transition.RankUp).newRank)
+        assertEquals(30, back.workDays)
     }
 
-    @Test fun `full cycle - promote E to D, then 2 idle from plus1 back to E`() {
-        // 5 active days at E (counter 0): promote to D
-        var counter = 0
-        var rank = Rank.E
-        repeat(5) {
-            val t = RankLogic.applyActiveDay(counter, rank)
-            when (t) {
-                is RankLogic.Transition.RankUp -> { rank = t.newRank; counter = t.newCounter }
-                is RankLogic.Transition.CounterUpdated -> counter = t.newCounter
-                else -> error("unexpected: $t")
-            }
-        }
-        assertEquals(Rank.D, rank)
-        assertEquals(0, counter)
+    @Test fun `work days floor at zero`() {
+        var days = 1
+        repeat(5) { days = RankLogic.applyIdleDay(days, Rank.E).workDays }
+        assertEquals("never goes negative", 0, days)
+    }
 
-        // 1 active day at D to get counter to +1
-        val active = RankLogic.applyActiveDay(counter, rank)
-        counter = (active as RankLogic.Transition.CounterUpdated).newCounter
-        assertEquals(1, counter)
+    @Test fun `EX is reachable and is the top of the ladder`() {
+        val t = RankLogic.applyActiveDay(workDays = 239, currentRank = Rank.S, averageStat = 80f)
+        assertTrue(t is RankLogic.Transition.RankUp)
+        assertEquals(Rank.EX, (t as RankLogic.Transition.RankUp).newRank)
+        assertEquals(240, t.workDays)
 
-        // 2 idle days: +1 → 0 (stay), 0 → -1 (demote)
-        val idle1 = RankLogic.applyIdleDay(counter, rank)
-        counter = (idle1 as RankLogic.Transition.CounterUpdated).newCounter
-        assertEquals(0, counter)
+        // Nothing above EX: further active days only bank more days.
+        val beyond = RankLogic.applyActiveDay(500, Rank.EX, averageStat = 100f)
+        assertTrue(beyond is RankLogic.Transition.DaysUpdated)
+        assertEquals(501, beyond.workDays)
+    }
 
-        val idle2 = RankLogic.applyIdleDay(counter, rank)
-        assertTrue(idle2 is RankLogic.Transition.RankDown)
-        val down = idle2 as RankLogic.Transition.RankDown
-        rank = down.newRank
-        counter = down.newCounter
-        assertEquals(Rank.E, rank)
-        assertEquals(Rank.STREAK_DAYS_TO_RANK_UP, counter)
+    @Test fun `rankFor resolves several ranks at once for the recompute`() {
+        assertEquals(Rank.E, RankLogic.rankFor(workDays = 0, averageStat = 0f))
+        assertEquals(Rank.E, RankLogic.rankFor(workDays = 200, averageStat = 5f))
+        assertEquals(Rank.B, RankLogic.rankFor(workDays = 45, averageStat = 30f))
+        assertEquals(Rank.EX, RankLogic.rankFor(workDays = 900, averageStat = 95f))
+    }
+
+    @Test fun `rank ladder is E through EX ascending`() {
+        assertEquals(0, Rank.E.order)
+        assertEquals(6, Rank.EX.order)
+        assertEquals(7, Rank.entries.size)
+        assertEquals(Rank.D, Rank.E.nextRank())
+        assertEquals(null, Rank.EX.nextRank())
+        assertEquals(null, Rank.E.previousRank())
+        assertEquals(Rank.S, Rank.EX.previousRank())
+        assertTrue(Rank.S.canRankUp())
+        assertTrue(!Rank.EX.canRankUp())
+    }
+
+    // ---- Work Day reconstruction (the one-time upgrade) ----
+
+    @Test fun `a perfect run reconstructs to one work day per active day`() {
+        val yesterday = LocalDate.now().minusDays(1)
+        val days = (0 until 30).map { yesterday.minusDays(it.toLong()) }.toSet()
+        assertEquals(30, RankLogic.reconstructWorkDays(days, yesterday))
+    }
+
+    @Test fun `idle days between active days subtract`() {
+        // Active, idle, idle, active, active over five days ending yesterday: +1 -1 -1 +1 +1.
+        val yesterday = LocalDate.now().minusDays(1)
+        val start = yesterday.minusDays(4)
+        val days = setOf(start, yesterday.minusDays(1), yesterday)
+        assertEquals(2, RankLogic.reconstructWorkDays(days, yesterday))
+    }
+
+    @Test fun `an early gap cannot mortgage later work`() {
+        // The floor at 0 is why this is a day-by-day replay and not `2 * active - span`:
+        // 60 idle days followed by 20 active ones must reconstruct to 20, not -20.
+        val yesterday = LocalDate.now().minusDays(1)
+        val first = yesterday.minusDays(79)
+        val active = mutableSetOf(first)
+        (0 until 20).forEach { active += yesterday.minusDays(it.toLong()) }
+        assertEquals(20, RankLogic.reconstructWorkDays(active, yesterday))
+    }
+
+    @Test fun `no history reconstructs to zero`() {
+        assertEquals(0, RankLogic.reconstructWorkDays(emptySet(), LocalDate.now()))
+    }
+
+    @Test fun `today is not counted — tonight's tick will judge it`() {
+        val today = LocalDate.now()
+        assertEquals(0, RankLogic.reconstructWorkDays(setOf(today), today.minusDays(1)))
     }
 }

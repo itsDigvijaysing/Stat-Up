@@ -14,7 +14,8 @@ interface DecayStatsStore {
     suspend fun updateStats(stats: PlayerStats)
     suspend fun updateStreak(streak: Int)
     suspend fun updateRank(rank: Rank)
-    suspend fun updateRankUpCounter(counter: Int)
+    /** Persists the cumulative Work Day counter (never reset on promotion). */
+    suspend fun updateWorkDays(workDays: Int)
 }
 
 /** Persisted "last decay applied" local-day marker. Implemented by UserPreferences (DataStore). */

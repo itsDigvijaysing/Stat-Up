@@ -10,6 +10,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -44,12 +46,28 @@ import dev.statup.app.ui.screen.agent.AgentScreen
 import dev.statup.app.ui.screen.history.HistoryScreen
 import dev.statup.app.ui.screen.legal.PrivacyPolicyScreen
 import dev.statup.app.ui.screen.onboarding.OnboardingScreen
+import dev.statup.app.ui.screen.help.HowItWorksScreen
+import dev.statup.app.ui.screen.tutorial.TutorialScreen
 import dev.statup.app.ui.screen.rewards.RewardsScreen
 import dev.statup.app.ui.screen.settings.SettingsScreen
 import dev.statup.app.ui.screen.stats.StatsScreen
 import dev.statup.app.ui.screen.status.StatusScreen
 import dev.statup.app.ui.screen.tasks.TasksScreen
+import dev.statup.app.rpg.StatUpgradeRunner
+import dev.statup.app.rpg.StatUpgradeState
+import dev.statup.app.ui.theme.AccentPrimary
 import dev.statup.app.ui.theme.BackgroundBase
+import dev.statup.app.ui.theme.Inter
+import dev.statup.app.ui.theme.TextPrimary
+import dev.statup.app.ui.theme.TextSecondary
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.koin.compose.koinInject
 
 private val bottomNavItems = listOf(
@@ -73,11 +91,82 @@ fun AppNavigation(
     // Expose the Haptic Feedback preference app-wide so action handlers can tick on confirm.
     val hapticsEnabled by userPreferences.hapticFeedback.collectAsStateWithLifecycle(initialValue = true)
 
+    // The guided tutorial is a second gate behind onboarding: it must be finished before the
+    // main shell unlocks, so a new user always sees the earn → stat → spend loop work once.
+    val tutorialDone by produceState<Boolean?>(initialValue = null, userPreferences) {
+        userPreferences.tutorialComplete.collect { value = it }
+    }
+
+    // One-time stat rebuild for installs that predate the progression change. Held in front of
+    // everything so the user never watches their stats move under them mid-session.
+    val upgradeRunner = koinInject<StatUpgradeRunner>()
+    val upgradeState by upgradeRunner.state.collectAsStateWithLifecycle()
+
     CompositionLocalProvider(LocalHapticsEnabled provides hapticsEnabled) {
-        when (onboarded) {
-            null -> Box(modifier = Modifier.fillMaxSize().background(BackgroundBase))
-            false -> OnboardingScreen()
-            else -> MainShell(navController)
+        Box(modifier = Modifier.fillMaxSize()) {
+            when {
+                // `null` = the flag is still loading, so render a neutral dark frame rather than
+                // flashing onboarding at an already-onboarded user.
+                onboarded == null -> Box(modifier = Modifier.fillMaxSize().background(BackgroundBase))
+                onboarded == false -> OnboardingScreen()
+                tutorialDone == null -> Box(modifier = Modifier.fillMaxSize().background(BackgroundBase))
+                tutorialDone == false -> TutorialScreen()
+                else -> MainShell(navController)
+            }
+
+            if (upgradeState.isRunning) {
+                StatUpgradeOverlay(state = upgradeState)
+            }
+        }
+    }
+}
+
+/**
+ * Blocking progress screen for the one-time upgrade. Covers the whole app because the stats
+ * underneath are mid-rewrite; it is dismissed by the runner reaching [StatUpgradeState.Done].
+ */
+@Composable
+private fun StatUpgradeOverlay(state: StatUpgradeState) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundBase.copy(alpha = 0.97f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(32.dp)
+        ) {
+            CircularProgressIndicator(color = AccentPrimary)
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Updating your stats",
+                color = TextPrimary,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = Inter
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = when (state) {
+                    is StatUpgradeState.Categorising ->
+                        "Sorting your past tasks into stats… ${state.done} / ${state.total}"
+                    StatUpgradeState.Rebuilding -> "Rebuilding your stats from everything you've earned…"
+                    else -> ""
+                },
+                color = TextSecondary,
+                fontSize = 14.sp,
+                fontFamily = Inter,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Your points, history and rewards are untouched.",
+                color = TextSecondary.copy(alpha = 0.7f),
+                fontSize = 12.sp,
+                fontFamily = Inter,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -172,6 +261,9 @@ private fun MainShell(navController: NavHostController) {
                 }
                 composable(Routes.PRIVACY_POLICY) {
                     PrivacyPolicyScreen(navController = navController)
+                }
+                composable(Routes.HOW_IT_WORKS) {
+                    HowItWorksScreen(navController = navController)
                 }
             }
         }

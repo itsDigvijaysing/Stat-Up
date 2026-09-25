@@ -104,7 +104,8 @@ class AchievementTracker(
             "rank_c" to 2,
             "rank_b" to 3,
             "rank_a" to 4,
-            "rank_s" to 5
+            "rank_s" to 5,
+            "rank_ex" to 6
         )
         for ((id, requiredOrder) in rankAchievements) {
             if (rankOrder >= requiredOrder) {

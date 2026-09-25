@@ -18,9 +18,13 @@ import dev.statup.app.quotes.OfflineQuotePack
 import dev.statup.app.quotes.QuotePack
 import dev.statup.app.quotes.QuoteRepository
 import dev.statup.app.quotes.ZenQuotesApi
+import dev.statup.app.ai.classifier.CategoryBackfill
+import dev.statup.app.ai.classifier.HashedLinearTaskClassifier
+import dev.statup.app.ai.classifier.TaskClassifier
 import dev.statup.app.rpg.AchievementTracker
 import dev.statup.app.rpg.DecayEngine
-import dev.statup.app.rpg.RankCalculator
+import dev.statup.app.rpg.StatRecomputer
+import dev.statup.app.rpg.StatUpgradeRunner
 import dev.statup.app.rpg.StatsEngine
 import dev.statup.app.rpg.Transactor
 import dev.statup.app.sync.TodoistApi
@@ -43,6 +47,8 @@ import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
+
+private const val CLASSIFIER_ASSET = "classifier/stat_clf_v1.bin"
 
 val appModule = module {
     // Database
@@ -97,7 +103,7 @@ val appModule = module {
 
     // Todoist
     single { TodoistApi(get()) }
-    single { TodoistSyncManager(get(), get(), get(), get()) }
+    single { TodoistSyncManager(get(), get(), get(), get(), get()) }
 
     // Daily Quote — UserPreferences implements the DailyQuoteStore slice.
     single<QuotePack> { OfflineQuotePack(androidContext()) }
@@ -140,7 +146,7 @@ val appModule = module {
                     points = points,
                     type = dev.statup.app.domain.model.TransactionType.EARN,
                     source = dev.statup.app.domain.model.TransactionSource.MANUAL,
-                    description = "Achievement reward: $achievementId"
+                    description = "${dev.statup.app.data.repository.ACHIEVEMENT_REWARD_PREFIX}$achievementId"
                 )
             }
         )
@@ -149,7 +155,6 @@ val appModule = module {
 
     // RPG Engines
     single { StatsEngine() }
-    single { RankCalculator() }
     single {
         DecayEngine(
             statsStore = get<PlayerRepository>(),
@@ -163,10 +168,36 @@ val appModule = module {
     }
     single { AchievementTracker(get(), get(), get()) }
 
+    // Offline task -> stat classifier. The 96 KB blob is read from assets on first use and
+    // held for the process lifetime; passing a byte-array provider (not a Context) keeps the
+    // scoring path JVM-testable.
+    single<TaskClassifier> {
+        val context = androidContext()
+        HashedLinearTaskClassifier(
+            modelBytes = { context.assets.open(CLASSIFIER_ASSET).use { it.readBytes() } }
+        )
+    }
+    single {
+        CategoryBackfill(
+            earnStore = get<PointsRepository>(),
+            statsStore = get<PlayerRepository>(),
+            classifier = get(),
+            transactor = get()
+        )
+    }
+    single {
+        StatRecomputer(
+            statsStore = get<PlayerRepository>(),
+            lifetimePoints = get<PointsRepository>(),
+            transactor = get()
+        )
+    }
+    single { StatUpgradeRunner(get<UserPreferences>(), get(), get()) }
+
     // ViewModels
-    viewModel { StatusViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { StatusViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { RewardsViewModel(get(), get(), get()) }
-    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { TasksViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel {
         HistoryViewModel(
@@ -178,4 +209,5 @@ val appModule = module {
     viewModel { StatsViewModel(get(), get()) }
     viewModel { AgentViewModel(get(), get()) }
     viewModel { OnboardingViewModel(get(), get()) }
+    viewModel { dev.statup.app.ui.screen.tutorial.TutorialViewModel(get(), get(), get(), get()) }
 }

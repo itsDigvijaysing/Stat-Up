@@ -39,11 +39,14 @@ interface PlayerStatsDao {
     @Query("UPDATE player_stats SET streak = :streak, longestStreak = CASE WHEN :streak > longestStreak THEN :streak ELSE longestStreak END, lastActivityAt = :activityAt, updatedAt = :updatedAt WHERE id = 1")
     suspend fun updateStreak(streak: Int, activityAt: Long = System.currentTimeMillis(), updatedAt: Long = System.currentTimeMillis())
 
-    @Query("UPDATE player_stats SET rank = :rank, rankUpStreakCounter = 0, updatedAt = :updatedAt WHERE id = 1")
+    // Work Days are deliberately NOT reset here: the counter is cumulative and must survive
+    // promotion. Resetting it was the old star-line model and would wipe the user's progress.
+    @Query("UPDATE player_stats SET rank = :rank, updatedAt = :updatedAt WHERE id = 1")
     suspend fun updateRank(rank: String, updatedAt: Long = System.currentTimeMillis())
 
-    @Query("UPDATE player_stats SET rankUpStreakCounter = :counter WHERE id = 1")
-    suspend fun updateRankUpCounter(counter: Int)
+    /** Cumulative Work Days. Column keeps its legacy name so no DB migration is needed. */
+    @Query("UPDATE player_stats SET rankUpStreakCounter = :workDays WHERE id = 1")
+    suspend fun updateWorkDays(workDays: Int)
 
     @Query("UPDATE player_stats SET totalPointsEarned = totalPointsEarned + :points WHERE id = 1")
     suspend fun addPoints(points: Int)

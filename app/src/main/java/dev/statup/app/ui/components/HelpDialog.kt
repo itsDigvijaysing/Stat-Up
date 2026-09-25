@@ -1,6 +1,7 @@
 package dev.statup.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -34,9 +35,10 @@ data class HelpPoint(val title: String, val detail: String, val example: String?
  */
 @Composable
 fun HelpIconButton(onClick: () -> Unit, contentDescription: String = "How this works") {
-    // A bare "?" glyph, not a glass circle: help is a fallback, so it should sit quietly next
-    // to the primary action rather than compete with it. The 48dp box keeps the touch target
-    // legal (Core App Quality Touch_Target_Size) while nothing is drawn behind the glyph.
+    // Previously a bare glyph with nothing drawn behind it — testers never registered it as
+    // tappable. It now carries the same glass circle as the other icon buttons so it reads as
+    // an affordance, while the 48dp touch target (Core App Quality Touch_Target_Size) and the
+    // quiet accent colour keep it from competing with the screen's primary action.
     Box(
         modifier = Modifier
             .size(48.dp)
@@ -45,6 +47,13 @@ fun HelpIconButton(onClick: () -> Unit, contentDescription: String = "How this w
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center
     ) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(CircleShape)
+                .background(AccentPrimary.copy(alpha = 0.14f))
+                .border(1.dp, AccentPrimary.copy(alpha = 0.35f), CircleShape)
+        )
         Text(
             text = "?",
             color = AccentPrimary,

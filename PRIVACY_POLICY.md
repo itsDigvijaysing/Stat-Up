@@ -19,7 +19,7 @@ Stat Up is an offline-first app. The core features — stats, ranks, streaks, ta
 - Daily mood feedback
 - Achievement records
 - Mission and task completion history
-- Stat values, rank, streak, and decay logs
+- Stat values, rank, work days, streak, and decay logs
 - Your username (only what you type into Settings)
 - Your preferences (hexagon style, animation toggles, haptics, etc.)
 - Your Todoist API token, if you connect Todoist (stored encrypted via AES-256-GCM in `EncryptedSharedPreferences`)
@@ -40,7 +40,7 @@ Stat Up is an offline-first app. The core features — stats, ranks, streaks, ta
 - Triggered only if you enter a Google Gemini API key in Settings and open the Agent tab.
 - When you send a message, the app contacts `generativelanguage.googleapis.com` (Google's Generative Language API) and sends:
   - your typed message
-  - a short snapshot of your current player state: name, rank, streak counter, six stat values, total points earned, your last 5 earn transactions, and up to 4 active missions (used to ground the coach's replies in your data)
+  - a short snapshot of your current player state: name, rank, work day count, streak, six stat values and their average, total points earned, your last 5 earn transactions, and up to 4 active missions (used to ground the coach's replies in your data)
 - Replies come back from Google. Google's data-handling for this API is governed by Google's own privacy policy at https://policies.google.com/privacy. Google's terms for AI APIs are at https://ai.google.dev/terms.
 - Your API key is sent only to Google, encrypted in transit (HTTPS).
 - You can disconnect any time in Settings → Integrations → AI Agent.
