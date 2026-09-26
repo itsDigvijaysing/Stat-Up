@@ -24,9 +24,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 
-// flatMapLatest is still marked experimental in kotlinx-coroutines. It is used deliberately here
-// to re-issue the day-scoped queries when the local day rolls over - opting in explicitly rather
-// than building on an unacknowledged warning.
+// flatMapLatest (experimental) re-issues day-scoped queries when the local day rolls over;
+// opted in explicitly rather than building on an unacknowledged warning.
 @OptIn(ExperimentalCoroutinesApi::class)
 class StatusViewModel(
     private val playerRepository: PlayerRepository,
@@ -48,13 +47,8 @@ class StatusViewModel(
 
     private var previousRank: Rank? = null
 
-    /**
-     * Emits the current local day's [start, endExclusive) epoch-ms bounds, re-emitting once the
-     * day rolls over. Probes every 60s; `distinctUntilChanged` filters out the per-minute
-     * heartbeat so downstream `flatMapLatest` only re-issues on actual day boundaries.
-     * Shared (`shareIn`) so the mood flag and today's-points collectors ride a single
-     * ticker instead of each running their own.
-     */
+    /** Current local day's [start, endExclusive) bounds, re-emitting on day rollover. Shared
+     * (`shareIn`) so the mood flag and today's-points collectors ride one 60s ticker, not each their own. */
     private val dayRangeFlow: Flow<Pair<Long, Long>> = flow {
         while (true) {
             emit(todayMillisRange())
@@ -113,11 +107,8 @@ class StatusViewModel(
         }
     }
 
-    /**
-     * Resolve the equipped title against the live unlocked list, so un-equipping,
-     * achievement deletion, or a full reset all degrade gracefully (title disappears
-     * rather than pointing at a stale id). Also feeds the picker dialog's options.
-     */
+    /** Resolves the equipped title against the live unlocked list so a deletion or reset
+     * degrades gracefully (disappears) instead of pointing at a stale id. */
     private suspend fun observeEquippedTitle() {
         combine(
             userPreferences.equippedTitleId,
@@ -162,12 +153,8 @@ class StatusViewModel(
         _uiState.update { it.copy(shieldMessage = null) }
     }
 
-    /**
-     * Resolve the day's quote. Re-resolves when the local day rolls over (dayStartFlow)
-     * or the user changes the source in Settings (quoteSource). Cache hits inside
-     * QuoteRepository make repeat emissions free; failures resolve to the offline pack
-     * inside the repository, so this never errors - worst case the card stays hidden.
-     */
+    /** Re-resolves on day rollover or source change. Failures fall back to the offline pack
+     * inside the repository, so this never errors - worst case the card stays hidden. */
     private suspend fun loadDailyQuote() {
         combine(dayRangeFlow, userPreferences.quoteSource) { _, _ -> }
             .collect {
@@ -177,9 +164,8 @@ class StatusViewModel(
     }
 
     private suspend fun observeMoodCheckedInToday() {
-        // flatMapLatest off the day ticker so the underlying query is re-issued with the
-        // new range whenever the local day rolls over (catches users who leave the app
-        // open across midnight). Old subscription is cancelled by flatMapLatest semantics.
+        // Re-issues the query with the new range on day rollover - catches users who leave
+        // the app open across midnight.
         dayRangeFlow
             .flatMapLatest { (start, end) ->
                 transactionDao.countBySourceInRange(TransactionSource.MOOD.name, start, end)

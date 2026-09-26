@@ -20,10 +20,8 @@ import org.junit.Test
 class HistoryViewModelTest {
 
     /**
-     * Regression test for the lost-update race: a filter change made by the user while the
-     * (off-Main) aggregation of a freshly-emitted transaction list is in flight must NOT be
-     * reverted when that aggregation writes its result back. The buggy version snapshotted
-     * state before the suspending aggregation and overwrote it afterward.
+     * Regression test for a lost-update race: a filter change made mid-aggregation must not be
+     * reverted when the aggregation writes its result back (the buggy version overwrote it).
      */
     @Test
     fun `filter change during aggregation is not clobbered by the write-back`() = runTest {

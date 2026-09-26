@@ -76,9 +76,8 @@ fun OnboardingScreen(viewModel: OnboardingViewModel = koinViewModel()) {
     Box(modifier = Modifier.fillMaxSize()) {
         AmbientBackground()
         Column(
-            // Onboarding renders outside MainShell's Scaffold, so nothing else reserves room
-            // for the system bars - without this the "Next" button sits under the navigation
-            // bar (gesture pill or 3-button alike). AmbientBackground stays edge-to-edge.
+            // Onboarding renders outside MainShell's Scaffold, so nothing else reserves room for
+            // the system bars - without this "Next" sits under the nav bar.
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding()

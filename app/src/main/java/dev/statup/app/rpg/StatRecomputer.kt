@@ -13,16 +13,8 @@ interface LifetimeStatPointsSource {
 }
 
 /**
- * Rebuilds every stat from the points the user has already earned, once, after the
- * points-per-stat rate changed. Beta has few installs, so recomputing is both cheaper and
- * more honest than grandfathering two curves.
- *
- * Reads `transactions` and writes only the singleton `player_stats` row: transactions,
- * balance, redemptions and achievements are never touched. `decay_log` is deliberately
- * ignored - the old all-six-stats decay is the bug being fixed and its record is incomplete.
- *
- * Rank is re-derived from the rebuilt stats plus the banked Work Days, and because
- * [RankLogic.rankFor] is a lookup it can move the player several ranks at once.
+ * One-time rebuild of every stat from lifetime earn points after the points-per-stat rate changed.
+ * Writes only the singleton `player_stats` row - transactions, balance and achievements are untouched.
  */
 class StatRecomputer(
     private val statsStore: DecayStatsStore,
@@ -47,9 +39,8 @@ class StatRecomputer(
             vitStat = stat(StatType.VIT), vitPointsAcc = acc(StatType.VIT),
             updatedAt = System.currentTimeMillis()
         )
-        // The stored counter is the pre-v4 one (0..5, reset on every promotion), so it is
-        // discarded and rebuilt from the real earn history. Without this every existing player
-        // would land on rank E regardless of how long they had been playing.
+        // The stored counter is the pre-v4 one (0..5, reset every promotion) and is discarded here -
+        // without rebuilding from real earn history, every existing player would land on rank E.
         val workDays = RankLogic.reconstructWorkDays(
             activeDays = lifetimePoints.activeEarnDays()
                 .mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }

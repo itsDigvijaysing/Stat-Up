@@ -7,13 +7,8 @@ import dev.statup.app.domain.model.PlayerStats
 import kotlinx.coroutines.flow.first
 
 /**
- * Builds the "current state" block that's injected as the tail of the system instruction.
- *
- * Kept compact (~500 tokens worst case) so it doesn't dominate the prompt budget - the agent
- * mostly needs broad context, not every individual transaction.
- *
- * Caches nothing: each call re-reads the DB. ViewModel calls it once per `sendMessage` so the
- * agent always sees fresh data.
+ * Builds the "current state" block appended to the system instruction. Kept compact (~200
+ * tokens) and uncached - re-reads the DB every `sendMessage` so the agent sees fresh data.
  */
 class AgentContextBuilder(
     private val playerState: PlayerStateProvider,
@@ -25,11 +20,8 @@ class AgentContextBuilder(
     suspend fun build(): String {
         val stats = playerState.getStatsOnce() ?: return EMPTY_STATE_FALLBACK
         val userName = username.first()
-        // 5 most-recent EARN rows, filtered + limited in SQL. Filtering by type in the query
-        // (rather than fetching the recent N of any type and filtering in memory) ensures the
-        // earns block is never starved by a run of redemptions/non-earn rows.
-        // Truncate descriptions to 40 chars so long Todoist task titles don't blow the budget.
-        // Drop dates - the AI rarely reasons about specific calendar days and they cost tokens.
+        // Filtered by type in SQL (not fetched-then-filtered) so the earns block can't be
+        // starved by a run of redemptions/non-earn rows.
         val recent = transactionDao.getRecentByType("EARN", 5).first()
             .asSequence()
             .joinToString("\n") {
@@ -74,9 +66,8 @@ class AgentContextBuilder(
  * still feels coherent with the rest of the experience.
  */
 object AgentPersona {
-    // Kept tight on purpose. Every extra sentence here costs tokens on every send and slows
-    // first-token latency. Domain abbreviations are spelled out once; mechanics are summarised
-    // rather than fully restated (the player-state block below provides the live numbers).
+    // Kept tight on purpose - every extra sentence here costs tokens on every send and slows
+    // first-token latency.
     val SYSTEM_PROMPT = """
         You are the in-app coach for Stat Up, an RPG-themed productivity app. Six stats:
         STR (training), INT (study), WIS (reflection), DEX (skill), CHA (social), VIT (health).

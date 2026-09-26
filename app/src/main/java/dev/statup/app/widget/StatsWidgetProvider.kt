@@ -20,18 +20,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * 4×2 home-screen widget showing the player's current rank, balance, streak, and today's points.
- *
- * Update model: explicit broadcast-driven. We don't rely on `updatePeriodMillis` (the manifest
- * sets it to 0). Instead, [StatsWidgetUpdater.update] is called from the app whenever data that
- * affects the widget changes: balance updates (PointsRepository.addPoints), decay tick
- * (DecayEngine.applyDailyDecay), and app start.
- *
- * RemoteViews trade-offs:
- *   - Can't use Compose, custom views, or coroutines on the rendering thread.
- *   - onUpdate arrives via BroadcastReceiver.onReceive, which runs on the MAIN thread - so the
- *     DB read is moved off it with goAsync() rather than blocking there.
- *   - Click target is the whole root view → opens MainActivity.
+ * 4x2 home-screen widget. onUpdate arrives via BroadcastReceiver.onReceive on the MAIN thread,
+ * so the DB read is moved off it with goAsync() rather than blocking there.
  */
 class StatsWidgetProvider : AppWidgetProvider() {
 
@@ -40,9 +30,8 @@ class StatsWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        // goAsync() keeps the receiver alive while we read off the main thread. Blocking here
-        // instead would stall the UI thread on three DB queries per broadcast - an ANR risk
-        // whenever the DB is busy (e.g. mid-sync).
+        // goAsync() keeps the receiver alive while reading off the main thread; blocking here
+        // instead risks an ANR on three DB queries per broadcast.
         val pending = goAsync()
         val appContext = context.applicationContext
         scope.launch {
@@ -111,9 +100,8 @@ class StatsWidgetProvider : AppWidgetProvider() {
     companion object {
         private const val REQUEST_OPEN_APP = 100
 
-        // One scope for the receiver class rather than a fresh one per broadcast. Provider
-        // instances are transient (the system recreates one per broadcast), so this can't hang
-        // off the instance.
+        // One scope for the class, not the instance: Provider instances are transient (recreated
+        // per broadcast), so a scope can't hang off `this`.
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
 }

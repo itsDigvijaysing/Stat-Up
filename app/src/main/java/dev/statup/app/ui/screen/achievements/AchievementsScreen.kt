@@ -71,9 +71,8 @@ fun AchievementsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f)
         ) {
-            // A just-earned achievement jumps to the very top while its glow lasts, so an
-            // unlock is actually seen - the list is long and "in progress first" otherwise
-            // buries the thing that just happened below a screenful of locked rows.
+            // A just-earned achievement jumps to the top while its glow lasts, so it isn't
+            // buried below a screenful of locked rows.
             val now = System.currentTimeMillis()
             val (fresh, settled) = uiState.achievements.partition { a ->
                 a.isUnlocked && a.unlockedAt?.let { now - it < FRESH_UNLOCK_WINDOW_MS } == true
@@ -495,10 +494,8 @@ private fun CreateAchievementDialog(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Custom achievements are manual-completion only: nothing in
-                    // AchievementTracker can auto-advance a user-defined id, so a category and a
-                    // target would render a progress bar that could never move. Removed rather
-                    // than shown as dead controls.
+                    // Manual-completion only: AchievementTracker can't auto-advance a custom id,
+                    // so a category/target would render a progress bar that never moves.
                     Text(
                         text = "Tick it off yourself whenever you've earned it.",
                         color = TextTertiary,

@@ -45,9 +45,8 @@ data class PlayerStats(
     fun averageStat(): Float = totalStats() / 6f
 
     /**
-     * Cumulative Work Days: +1 per active day, -1 per idle day, floored at 0 and never reset
-     * on promotion. Backed by the legacy `rankUpStreakCounter` column (same column, new
-     * meaning) so the change needs no DB migration.
+     * Cumulative Work Days - backed by the legacy `rankUpStreakCounter` column (same column,
+     * new meaning) so the change needed no DB migration.
      */
     val workDays: Int get() = rankUpStreakCounter
 
@@ -56,9 +55,8 @@ data class PlayerStats(
         const val BASE_STAT = 5
         const val POINTS_PER_STAT = 5
 
-        // Streak Freeze Shield: bought with points, consumed automatically on an idle day.
-        // A consumed shield turns the idle day into a "rest day" - no stat decay, Work Day
-        // counter and streak untouched. Capped so decay stays a real threat (no hoarding).
+        // Streak Freeze Shield: consumed automatically on an idle day, turning it into a "rest
+        // day" - no stat decay, Work Days/streak untouched. Capped so decay stays a real threat.
         const val SHIELD_COST = 30
         const val MAX_SHIELDS = 3
     }

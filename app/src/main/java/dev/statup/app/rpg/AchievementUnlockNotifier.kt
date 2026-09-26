@@ -6,12 +6,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 
 /**
- * Carries "an achievement just unlocked" from the repository to whatever UI is on screen.
- *
- * A buffered [Channel] rather than a StateFlow: an unlock is a one-shot event that must be
- * delivered exactly once, and it can fire while no screen is collecting (a background Todoist
- * sync, the midnight decay tick). The buffer holds those until the UI comes back, and
- * re-collecting never replays an already-celebrated unlock.
+ * A buffered [Channel], not a StateFlow: an unlock is a one-shot event that must fire exactly once
+ * even with no screen collecting (background sync, the midnight decay tick), and must never replay.
  */
 class AchievementUnlockNotifier {
     private val channel = Channel<Achievement>(capacity = Channel.BUFFERED)

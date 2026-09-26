@@ -6,14 +6,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Black-box tests for the cumulative Work Day model.
- *
- * Contract:
- *   - Active day: Work Days +1. Idle day: -1, floored at 0.
- *   - Work Days are NEVER reset - promotion keeps the banked total.
- *   - Promotion needs days AND average stat. Demotion looks at days only.
- */
+/** Contract: active day +1, idle day -1 (floored at 0), never reset on promotion; promotion
+ * needs days AND average stat, demotion needs days alone. */
 class RankLogicTest {
 
     @Test fun `promotion needs both requirements - days alone is not enough`() {

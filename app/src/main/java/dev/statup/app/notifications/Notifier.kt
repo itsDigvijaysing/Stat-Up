@@ -16,16 +16,8 @@ import dev.statup.app.MainActivity
 import dev.statup.app.R
 
 /**
- * Single entry point for all app notifications. Centralises channel creation, permission checks,
- * and `NotificationCompat.Builder` boilerplate so feature code (sync workers, decay reminders,
- * future AI agent) doesn't have to repeat any of it.
- *
- * Channels follow the v3.1+ taxonomy:
- *  - [CHANNEL_SYNC] - Todoist sync results (low importance, no sound).
- *  - [CHANNEL_REMINDERS] - future: streak warnings, rank-down imminent.
- *
- * On Android 13+ the [Manifest.permission.POST_NOTIFICATIONS] permission must be granted by the
- * user before notifications appear - see [arePermissionsGranted].
+ * Single entry point for all app notifications - centralises channel creation, permission
+ * checks and `NotificationCompat.Builder` boilerplate.
  */
 class Notifier(private val context: Context) {
 
@@ -88,9 +80,8 @@ class Notifier(private val context: Context) {
     }
 
     /**
-     * An active day promoted the player. Posted from DecayWorker because the promotion happens
-     * at midnight with the app closed - StatusViewModel's rank-up animation only fires when it
-     * observes the transition live, so without this the best moment in the loop is silent.
+     * Posted from DecayWorker because promotion can happen at midnight with the app closed,
+     * when StatusViewModel's live rank-up animation never fires.
      */
     fun showRankUp(rankName: String) {
         notify(
@@ -126,13 +117,8 @@ class Notifier(private val context: Context) {
     }
 
     /**
-     * Single funnel for all notifications. Bails early if POST_NOTIFICATIONS is denied
-     * (Android 13+) or notifications are globally muted (pre-13). Centralising the gate
-     * here defends against future callers forgetting the check.
-     *
-     * Lint can't see through the [arePermissionsGranted] helper call (it only recognises
-     * an inline `checkSelfPermission`), so MissingPermission is suppressed - the runtime
-     * guard on the first line is the real protection.
+     * Lint can't see through [arePermissionsGranted] (it only recognises inline
+     * `checkSelfPermission`), so MissingPermission is suppressed - the runtime guard above is real.
      */
     @SuppressLint("MissingPermission")
     private fun notify(id: Int, channel: String, title: String, body: String) {

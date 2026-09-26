@@ -6,9 +6,8 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "transactions",
-    // Unique on externalId so concurrent Todoist syncs (background worker + manual button)
-    // can't insert the same completed task twice. SQLite's UNIQUE allows multiple NULLs,
-    // so manual transactions (externalId = null) are unaffected.
+    // Unique on externalId so concurrent Todoist syncs can't double-insert; SQLite's UNIQUE
+    // allows multiple NULLs, so manual transactions are unaffected.
     indices = [Index(value = ["externalId"], unique = true)]
 )
 data class TransactionEntity(

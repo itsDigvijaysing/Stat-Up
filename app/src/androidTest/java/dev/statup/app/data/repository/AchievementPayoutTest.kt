@@ -16,13 +16,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The unlock-and-pay transaction, against real SQLite.
- *
- * The award used to run *after* the transaction that recorded the unlock, on the reasoning that it
- * opens its own transaction anyway. That left a window where the unlock committed and the payout did
- * not: the row then reads as unlocked so nothing retries it, and every caller wraps `updateProgress`
- * in `runCatching`, so the points were lost silently. This has to be an instrumented test - a
- * pass-through transactor cannot demonstrate a rollback, only a real one can.
+ * The unlock-and-pay transaction against real SQLite - a pass-through transactor can't demonstrate
+ * a rollback, so this must be an instrumented test rather than a fake-transaction unit test.
  */
 @RunWith(AndroidJUnit4::class)
 class AchievementPayoutTest {

@@ -5,9 +5,8 @@ import dev.statup.app.data.local.db.dao.StatMappingDao
 import dev.statup.app.data.local.db.entity.StatMappingEntity
 
 /**
- * Default Todoist label → stat mappings. Called from app startup and from
- * `SettingsViewModel.fullReset` so a reset doesn't leave the table empty until the
- * next process start.
+ * Default Todoist label -> stat mappings, called from app startup and `fullReset` so a reset
+ * doesn't leave the table empty until the next process start.
  */
 object StatMappingSeeder {
 
@@ -17,9 +16,8 @@ object StatMappingSeeder {
     )
 
     /**
-     * Seed only if the mappings table is empty. The check-then-insert pair runs inside
-     * a Room transaction so a concurrent caller (e.g. app start racing with a reset)
-     * can't both observe "empty" and double-insert.
+     * Seeds only if empty; the check-then-insert runs inside a transaction so a concurrent
+     * caller (e.g. app start racing a reset) can't double-insert.
      */
     suspend fun seedIfEmpty(database: AppDatabase, dao: StatMappingDao) {
         database.withTransaction {

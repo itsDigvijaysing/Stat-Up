@@ -10,16 +10,8 @@ import androidx.compose.ui.graphics.Color
 import dev.statup.app.ui.theme.*
 
 /**
- * Background "ambient orbs" layer used as the Haze blur source for the whole app shell.
- *
- * Performance note: this Canvas was previously driven by 3 simultaneous `infiniteRepeatable`
- * animations at 60 fps, which forced the whole screen to redraw every frame. Because this
- * layer is the Haze source, every glass card / bottom bar on top re-blurred every frame too -
- * the dominant cause of intermittent lag on devices with weak GPUs (Waydroid, older Mali).
- *
- * Orbs are now drawn once at their natural mid-orbit positions. The motion was a ~60-second
- * cycle over only 10% of screen width - visually almost imperceptible. The static version
- * looks the same and lets Haze cache its blur instead of recomputing it every frame.
+ * Orbs are drawn once, statically - animating them re-blurred every glass card on top every
+ * frame (this Canvas is the Haze source), the dominant cause of lag on weak GPUs.
  */
 @Composable
 fun AmbientBackground(

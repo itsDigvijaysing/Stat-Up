@@ -6,21 +6,16 @@ import dev.statup.app.domain.model.StatType
 data class StatSuggestion(val stat: StatType, val confidence: Float)
 
 /**
- * Guesses which stat a task belongs to, fully offline.
- *
- * Returns `null` whenever the model is not confident enough - callers must then behave exactly
- * as they did before the classifier existed. That keeps this strictly additive: it can only
- * improve on the status quo, never regress it.
+ * Guesses which stat a task belongs to, fully offline. Returns `null` when not confident enough -
+ * callers must then behave exactly as before the classifier existed, so this can only improve, never regress.
  */
 interface TaskClassifier {
     fun classify(text: String): StatSuggestion?
 
     companion object {
         /**
-         * Minimum confidence to offer a guess at all. Measured on the 300-row held-out set:
-         * 0.55 covers 87% of tasks at 89.3% precision (0.65 would be 92.2% precise but only
-         * cover 76.7%). One number for every call site - the uncovered tasks fall back to the
-         * picker's default, which is what happens today.
+         * Minimum confidence to offer a guess - 0.55 covers 87% of tasks at 89.3% precision on the
+         * held-out set (0.65 would hit 92.2% precision but only cover 76.7%). One threshold for every call site.
          */
         const val CONFIDENCE_THRESHOLD = 0.55f
     }

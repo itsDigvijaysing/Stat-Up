@@ -7,9 +7,8 @@ import dev.statup.app.data.repository.PlayerRepository
 import kotlinx.coroutines.launch
 
 /**
- * Drives the first-run onboarding. Completing it persists the chosen name (if any) and flips the
- * `onboardingComplete` flag - which AppNavigation observes to swap from the onboarding screen to
- * the main shell.
+ * Completing onboarding persists the name (if any) and flips `onboardingComplete`, which
+ * AppNavigation observes to swap from onboarding to the main shell.
  */
 class OnboardingViewModel(
     private val userPreferences: UserPreferences,

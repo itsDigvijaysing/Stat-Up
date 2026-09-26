@@ -72,10 +72,8 @@ class HistoryViewModel(
     }
 
     /**
-     * Streaks come from player_stats - the same counter the Status screen and the widget show,
-     * and the one DecayEngine uses to drive rank. This screen used to re-derive its own from
-     * the transaction log, which disagreed on day one and after a Streak Shield absorbed an
-     * idle day. One source, three surfaces.
+     * Streaks come from player_stats, the same source Status/widget/DecayEngine use - this
+     * screen used to re-derive its own from the log, which disagreed after a Streak Shield.
      */
     private fun observeStreaks() {
         viewModelScope.launch {
@@ -136,9 +134,8 @@ class HistoryViewModel(
     private fun loadTransactions() {
         viewModelScope.launch {
             transactions.collect { txns ->
-                // Heavy, user-state-INDEPENDENT aggregation (sort, sums, streak walk) is O(N)
-                // over the full history - offload to the compute dispatcher to avoid dropping
-                // frames on large histories.
+                // O(N) aggregation over full history - offloaded to the compute dispatcher
+                // to avoid dropping frames on large histories.
                 val computed = withContext(computeDispatcher) {
                     val sorted = txns.sortedByDescending { it.createdAt }
                     val earned = txns
@@ -150,11 +147,8 @@ class HistoryViewModel(
                     BaseAggregates(sorted, earned, spent)
                 }
                 allTransactions = computed.sorted
-                // Write back through an atomic update that re-reads the CURRENT state, so a
-                // filter tap / month change made while the aggregation was in flight is not
-                // clobbered. The filter + calendar are derived from user-controllable fields,
-                // so they're recomputed against `current` rather than a stale pre-aggregation
-                // snapshot.
+                // Re-reads CURRENT state so a filter/month change made mid-aggregation isn't
+                // clobbered - filter and calendar are recomputed against `current`, not a stale snapshot.
                 _uiState.update { current ->
                     val filtered = applyFilter(computed.sorted, current.selectedFilter)
                     current.copy(
@@ -181,11 +175,7 @@ class HistoryViewModel(
         val spent: Int
     )
 
-    /**
-     * Generates a proper month calendar grid.
-     * Returns a list of 42 slots (6 weeks x 7 days).
-     * null = empty slot (padding before first day / after last day).
-     */
+    /** Returns 42 slots (6 weeks x 7 days); null = padding before/after the month. */
     private fun generateCalendarDays(
         transactions: List<Transaction>,
         month: Int,

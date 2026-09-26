@@ -59,13 +59,11 @@ class TasksViewModel(
 
     private fun loadTodoistStatus() {
         viewModelScope.launch {
-            // Hydrate the encrypted-secret cache first - the token flow starts as null even
-            // when a token is saved, and this ViewModel can win the race against
-            // StatUpApp.loadSecretsIfNeeded() on cold start.
+            // Hydrates the encrypted-secret cache first - this ViewModel can otherwise win the
+            // race against StatUpApp.loadSecretsIfNeeded() on cold start.
             userPreferences.getTodoistToken()
-            // REACTIVE: collect the token + last-sync flows instead of reading once. This
-            // ViewModel survives bottom-tab switches, so a one-shot read meant connecting
-            // Todoist in Settings never revealed the sync UI until the app was restarted.
+            // Collects rather than reads once: this ViewModel survives tab switches, so a
+            // one-shot read missed a token added in Settings until app restart.
             var wasConnected = false
             combine(
                 userPreferences.todoistToken,
@@ -211,19 +209,16 @@ class TasksViewModel(
 
     fun completeMission(mission: MissionEntity) {
         viewModelScope.launch {
-            // The repository completes the mission AND awards its points in one transaction, so a
-            // double tap cannot pay twice and a failed award cannot leave the mission marked done.
-            // Returns null when nothing was awarded (already complete, or an already-paid one-off).
+            // Completes + awards in one transaction (a double tap can't pay twice); returns null
+            // when nothing was awarded (already complete, or an already-paid one-off).
             val completed = missionRepository.completeMission(mission.id) ?: return@launch
 
             // Best-effort: an achievement-check failure must not crash mission completion
             // (the mission points were already awarded atomically above).
             runCatching { achievementTracker.onPointsEarned(TransactionSource.MISSION) }
 
-            // Advances the guided first run's "finish a task" step, if it is running. This MUST run
-            // after the achievement check: the step is gated on the first-task payout having landed,
-            // and the tour tells the user that exact balance before asking them to spend it. Calling
-            // it first meant the step advanced before the 45 points existed.
+            // Must run after the achievement check: the tutorial step is gated on the first-task
+            // payout having landed, and quotes that exact balance to the user.
             tutorialCoordinator.onTaskCompleted(completed)
         }
     }
@@ -239,9 +234,8 @@ class TasksViewModel(
     }
 
     private suspend fun resetDailyMissionsSuspend() {
-        // Delegate to the repository's once-per-local-day guarded reset (the same call the
-        // midnight DecayWorker makes), so completed dailies clear consistently regardless of
-        // whether the reset is triggered by a tab open or by background work.
+        // Same once-per-local-day guarded reset the midnight DecayWorker calls, so a tab-open
+        // trigger and background work can't double-reset or skip a day.
         missionRepository.resetDailyIfNeeded()
     }
 }

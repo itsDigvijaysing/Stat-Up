@@ -21,12 +21,8 @@ import dev.statup.app.ui.theme.TextPrimary
 import dev.statup.app.ui.theme.TextTertiary
 
 /**
- * The day's quote, rendered as a glass card under the status window. Renders nothing
- * while the quote is still resolving (no skeleton needed - resolution is instant for the
- * offline pack and one small request for online sources).
- *
- * When [Quote.attribution] is present it is rendered in the footer - ZenQuotes' free tier
- * REQUIRES visible attribution, so never strip that line.
+ * The day's quote card. When [Quote.attribution] is present it's rendered in the footer -
+ * ZenQuotes' free tier REQUIRES visible attribution, so never strip that line.
  */
 @Composable
 fun DailyQuoteCard(quote: Quote?, modifier: Modifier = Modifier) {

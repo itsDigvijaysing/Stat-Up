@@ -16,10 +16,8 @@ import org.junit.Test
 class AgentContextBuilderTest {
 
     /**
-     * Regression test for the earns-context starvation bug: when the most-recent transactions
-     * are dominated by REDEEMs, the agent's "Recent earns" block must still surface real EARN
-     * history rather than reporting "(none yet)". A type-filtered query fixes this; the old
-     * "fetch recent N then filter to EARN" approach reported nothing.
+     * Regression test: when recent transactions are dominated by REDEEMs, "Recent earns" must
+     * still surface real EARN history - the old "fetch recent N then filter" approach starved it.
      */
     @Test
     fun `recent earns are shown even when latest transactions are all redemptions`() = runTest {

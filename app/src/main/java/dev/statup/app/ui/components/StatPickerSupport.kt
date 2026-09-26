@@ -27,12 +27,8 @@ import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 
 /**
- * Debounced offline guess at which stat [text] belongs to.
- *
- * Returns `null` while typing, when the text is too short to mean anything, and whenever the
- * model isn't confident - in which case the caller must keep whatever the picker already had.
- * Scoring is sub-millisecond but the asset load on first use is not, so it runs off the main
- * thread.
+ * Debounced offline guess at which stat [text] belongs to; returns `null` while typing, when too
+ * short, or when the model isn't confident - the caller then keeps whatever the picker already had.
  */
 @Composable
 fun rememberStatSuggestion(text: String): StatSuggestion? {
@@ -66,11 +62,7 @@ fun rememberDefaultStat(): StatType {
     return stat
 }
 
-/**
- * One caption line under a stat picker: what the selected stat actually means, plus a marker
- * when the app chose it rather than the user. Nothing in the app defined the stats before, so
- * users were picking from six three-letter codes with no explanation.
- */
+/** One caption line under a stat picker: what the stat means, plus a marker if the app chose it. */
 @Composable
 fun StatPickerCaption(
     stat: StatType,

@@ -15,15 +15,8 @@ interface QuotePack {
 }
 
 /**
- * Bundled, fully-offline quote packs (assets/quotes/anime.json + motivation.json).
- *
- * This is the DEFAULT quote source - it keeps the app's offline-first stance (network
- * sources are an explicit opt-in in Settings) - and the fallback whenever an online fetch
- * fails. Selection is `epochDay % size`: deterministic per day, no stored state, and the
- * pack naturally rotates.
- *
- * The motivational pack is public-domain authors only; the anime pack is short quotes with
- * character/show attribution (see assets/quotes/README.txt).
+ * Bundled, fully-offline quote packs - the default source (offline-first) and the fallback
+ * whenever an online fetch fails. Selection is `epochDay % size`: deterministic, no stored state.
  */
 class OfflineQuotePack(private val context: Context) : QuotePack {
 

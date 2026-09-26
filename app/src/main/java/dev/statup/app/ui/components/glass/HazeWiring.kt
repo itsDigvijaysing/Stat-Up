@@ -11,12 +11,8 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
 
-/**
- * Threaded down from [dev.statup.app.ui.navigation.AppNavigation] so that any
- * glass component can apply backdrop blur over the scrolling content WITHOUT each screen
- * having to know about Haze. If the local is null (e.g., a Preview or a non-wired
- * screen), [hazeEffectOrFallback] falls through to no-op so cards still render normally.
- */
+/** Threaded down from [dev.statup.app.ui.navigation.AppNavigation] so glass components get
+ * blur without knowing about Haze; null (Preview, non-wired screen) falls through to no-op. */
 val LocalHazeState = compositionLocalOf<HazeState?> { null }
 
 /** Apply [hazeEffect] when a [HazeState] is available in the local; otherwise no-op. */

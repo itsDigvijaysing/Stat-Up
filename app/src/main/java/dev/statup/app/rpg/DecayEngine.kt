@@ -20,14 +20,8 @@ class DecayEngine(
     private val widgetUpdater: StatsWidgetUpdater? = null
 ) {
     /**
-     * Called at midnight by DecayWorker.
-     * Checks if any tasks/points were earned today.
-     * If yes: recordSuccessfulDay()
-     * If no: applyDecay()
-     *
-     * Idempotent within a local day - returns [DailyDecayResult.AlreadyApplied] if today's
-     * boundary was already processed. Guards against WorkManager retries, manual `runNow`
-     * calls during the same day, and overlapping schedules.
+     * Idempotent within a local day - guards against WorkManager retries, manual `runNow`
+     * calls, and overlapping schedules re-applying decay.
      */
     suspend fun applyDailyDecay(): DailyDecayResult {
         val today = LocalDate.now().toString() // yyyy-MM-dd in local zone
@@ -36,11 +30,8 @@ class DecayEngine(
             return DailyDecayResult.AlreadyApplied
         }
 
-        // Yesterday's window is [yesterday 00:00, today 00:00). Both bounds come from LocalDate
-        // rather than "today - 24h" so a DST day (23h or 25h long) still maps to exactly one
-        // calendar day - otherwise an earn in the shifted hour falls outside the window and
-        // costs the user an active day. Robust to WorkManager firing late: even at 02:15 the
-        // boundaries are unchanged.
+        // Bounds come from LocalDate, not "today - 24h", so a DST day (23h/25h) still maps to
+        // exactly one calendar day - otherwise a shifted-hour earn falls outside the window.
         val zone = ZoneId.systemDefault()
         val todayMidnight = LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli()
         val yesterdayMidnight = LocalDate.now(zone).minusDays(1)
@@ -48,16 +39,11 @@ class DecayEngine(
         val tomorrowMidnight = LocalDate.now(zone).plusDays(1)
             .atStartOfDay(zone).toInstant().toEpochMilli()
 
-        // Read the activity signal and apply the day's mutation inside ONE DB transaction so a
-        // concurrent earn / redeem / buy-shield (each its own transaction) can't be clobbered by
-        // the full-row stats write below - which would otherwise erase a just-purchased Streak
-        // Shield or freshly-earned stat points.
+        // One DB transaction so a concurrent earn/redeem/buy-shield can't be clobbered by the
+        // full-row stats write below (would otherwise erase a shield purchase or stat gain).
         val dailyResult = transactor.transaction {
-            // Authoritative idempotency check, INSIDE the transaction. The DataStore check above is
-            // only a cheap pre-filter (and a fallback for days processed by builds that predate this
-            // marker); it is written after the transaction commits, so a crash in between used to
-            // re-apply decay or burn a second Streak Shield on the retry. This marker commits with
-            // the mutation, so that window is closed.
+            // Authoritative idempotency check, INSIDE the transaction - the DataStore check above
+            // is only a pre-filter; this marker commits atomically with the mutation.
             if (decayLogDao.countByReasonInRange(DAY_MARKER, todayMidnight, tomorrowMidnight) > 0) {
                 return@transaction DailyDecayResult.AlreadyApplied
             }
@@ -74,8 +60,7 @@ class DecayEngine(
                 }
             } else {
                 // User was idle. A Streak Freeze Shield (if owned) absorbs the idle day as a
-                // "rest day": consume one shield, leave stats / streak / Work Days untouched.
-                // Otherwise decay applies as usual.
+                // "rest day" - consume one, leave stats/streak/Work Days untouched.
                 val stats = statsStore.getStatsOnce()
                 if (stats != null && stats.streakShields > 0) {
                     statsStore.updateStats(
@@ -106,9 +91,8 @@ class DecayEngine(
             outcome
         }
 
-        // Legacy marker, kept for one reason: a day processed by a build that predates the Room
-        // marker has no row in decay_log, and this is the only record that it was handled. It is no
-        // longer what guards against double-application - the in-transaction marker above is.
+        // Legacy marker - a day processed by a pre-Room-marker build has no decay_log row, so
+        // this is the only record it was handled. No longer what guards double-application.
         dayStore.setLastDecayDay(today)
 
         // Update streak/rank achievements, then push fresh state to any home-screen widgets
@@ -122,10 +106,8 @@ class DecayEngine(
     suspend fun applyDecay(reason: String = "daily_idle"): DecayResult {
         val stats = statsStore.getStatsOnce() ?: return DecayResult.NoStats
 
-        // Stat loss: 1 point from the SINGLE highest stat above BASE_STAT. At 5 points per stat
-        // point an active day earns +2..+4, so one missed day stings but recovers same-day -
-        // unlike the old all-six loop, which dug a six-day hole per miss. Ties resolve to enum
-        // order (STR first) so the outcome is deterministic.
+        // 1 point from the SINGLE highest stat above BASE_STAT (not all six, which used to dig
+        // a six-day hole per miss). Ties resolve to enum order for determinism.
         val decayed: StatType? = StatType.entries
             .filter { stats.getStat(it) > PlayerStats.BASE_STAT }
             .maxByOrNull { stats.getStat(it) }

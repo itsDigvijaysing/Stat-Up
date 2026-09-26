@@ -12,9 +12,6 @@ class AchievementTracker(
     private val playerRepository: PlayerRepository,
     private val pointsRepository: PointsRepository
 ) {
-    /**
-     * Called after points are earned. Checks points-based and task-based achievements.
-     */
     suspend fun onPointsEarned(source: TransactionSource) {
         val totalEarned = pointsRepository.getTotalEarned()
         checkPointsAchievements(totalEarned)
@@ -24,33 +21,21 @@ class AchievementTracker(
         }
     }
 
-    /**
-     * Called after a mood check-in. Tracks consecutive mood days.
-     * We approximate by counting total mood transactions (simple approach).
-     */
+    /** Approximates the mood streak via total check-in count, not actual consecutive days. */
     suspend fun onMoodCheckedIn() {
         val achievement = achievementRepository.getAchievement("mood_7") ?: return
         if (achievement.isUnlocked) return
         achievementRepository.updateProgress("mood_7", achievement.progress + 1)
     }
 
-    /**
-     * Called after a reward is redeemed.
-     */
     suspend fun onRewardRedeemed() {
         achievementRepository.updateProgress("first_reward", 1)
     }
 
-    /**
-     * Called when Todoist is connected for the first time.
-     */
     suspend fun onTodoistConnected() {
         achievementRepository.updateProgress("todoist_connect", 1)
     }
 
-    /**
-     * Called after streak/rank updates (e.g., from DecayEngine).
-     */
     suspend fun onStreakUpdated() {
         val stats = playerRepository.getStatsOnce() ?: return
         checkStreakAchievements(stats.streak)
@@ -58,9 +43,6 @@ class AchievementTracker(
         checkStatAchievements(stats)
     }
 
-    /**
-     * Full check - call after any significant game event to catch everything.
-     */
     suspend fun checkAll() {
         val stats = playerRepository.getStatsOnce() ?: return
         val totalEarned = pointsRepository.getTotalEarned()

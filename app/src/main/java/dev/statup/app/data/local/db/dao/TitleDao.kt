@@ -25,16 +25,14 @@ interface TitleDao {
     @Update
     suspend fun update(title: TitleEntity)
 
-    // MAX(...) keeps progress monotonic (high-water mark). Some trackers report a value that
-    // can drop after stat decay (e.g. a "balanced stats" minStat); without MAX the progress
-    // bar would visibly regress.
+    // MAX(...) keeps progress monotonic: some trackers report a value that can drop after stat
+    // decay (e.g. "balanced stats" minStat), which would otherwise visibly regress the bar.
     @Query("UPDATE titles SET progress = MAX(progress, :progress) WHERE id = :id")
     suspend fun updateProgress(id: String, progress: Int)
 
     /**
-     * Re-point a built-in achievement the user has NOT unlocked yet. Guarded on isUnlocked = 0
-     * so an already-claimed row keeps the value that was actually paid out - re-pointing it
-     * would advertise a reward the player never received.
+     * Guarded on isUnlocked = 0 so an already-claimed row keeps the value actually paid out -
+     * re-pointing it would advertise a reward the player never received.
      */
     @Query("UPDATE titles SET rewardPoints = :points WHERE id = :id AND isUnlocked = 0")
     suspend fun updateRewardPointsIfLocked(id: String, points: Int)

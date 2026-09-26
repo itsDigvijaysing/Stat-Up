@@ -31,8 +31,7 @@ import org.koin.core.logger.Level
 
 class StatUpApp : Application() {
     // SupervisorJob keeps siblings alive on one child failure; the handler swallows the
-    // exception so it doesn't propagate to the global Thread uncaught handler (which on
-    // Android typically crashes the app at startup - bad for a one-off init failure).
+    // exception so it can't crash app startup via the global uncaught-exception handler.
     private val initExceptionHandler = CoroutineExceptionHandler { _, e ->
         Log.e("StatUpApp", "Init coroutine failed", e)
     }
@@ -60,10 +59,8 @@ class StatUpApp : Application() {
         // (`by inject()` would defer construction until first access.)
         get<Notifier>()
 
-        // The two the first-run gate depends on. Held as Jobs so the gate can join them: the
-        // tutorial pays a mission and then waits on the `first_task` achievement, so opening the gate
-        // before the stats row or the achievement rows exist would let a fast user start a tour whose
-        // arithmetic cannot complete. Unrelated init stays fire-and-forget below.
+        // Held as Jobs so the gate can join them: opening the gate before the stats/achievement
+        // rows exist would let a fast user start a tutorial whose arithmetic can't complete.
         val achievementsReady = appScope.launch { achievementRepository.initializeAchievements() }
         val statsReady = appScope.launch {
             playerRepository.initializeStats()
@@ -73,13 +70,8 @@ class StatUpApp : Application() {
         appScope.launch { StatMappingSeeder.seedIfEmpty(database, statMappingDao) }
         appScope.launch { userPreferences.loadSecretsIfNeeded() }
 
-        // First-run resolution, then seeding, then the gate - strictly in that order, in ONE
-        // coroutine. The tutorial flag and the starter-content flag both default to false, which is
-        // indistinguishable from "an install that predates them", so they have to be decided before
-        // the UI reads them. Previously two separate coroutines wrote them while AppNavigation was
-        // already collecting, and whoever won decided whether an updating user got a tour and 13
-        // sample items they never asked for. The gate is marked last so the tabs are never gate-open
-        // and empty at the same time.
+        // Strictly ordered in ONE coroutine: two separate coroutines previously raced to write
+        // these flags, so whoever won decided if an updating user got a tour + sample items.
         appScope.launch {
             try {
                 // Everything the first screen can touch must exist before the gate opens.
@@ -88,9 +80,8 @@ class StatUpApp : Application() {
                 userPreferences.resolveFirstRunFlags(isFreshInstall())
                 StarterContentSeeder.seedIfNeeded(database, get<MissionDao>(), get<RewardDao>(), userPreferences)
             } finally {
-                // The gate opens even if something above failed. The UI blocks on it, so leaving it
-                // shut would strand the user on a blank frame, and a failed seed is self-healing -
-                // its flag is only written on success, so the next launch simply retries.
+                // Opens even on failure - the UI blocks on this gate, and a failed seed is
+                // self-healing (flag only written on success, so next launch retries).
                 userPreferences.markFirstRunResolved()
             }
         }

@@ -23,13 +23,8 @@ import dev.statup.app.ui.components.glass.GlassCard
 import dev.statup.app.ui.theme.*
 
 /**
- * The complete explainer, in plain language: "work days", not "star lines", and no RPG jargon
- * beyond the stat names themselves.
- *
- * Every number on this screen is read from the live constants ([PlayerStats.POINTS_PER_STAT],
- * [Rank.daysRequired], [Rank.statsRequired], [StatType.blurb]) rather than written into the
- * copy, so rebalancing the game can never leave this page quietly lying to the user - which is
- * exactly what happened to the old hardcoded help text.
+ * Every number here reads from the live constants ([PlayerStats.POINTS_PER_STAT], [Rank] fields,
+ * [StatType.blurb]) rather than being written into copy, which used to silently drift out of date.
  */
 @Composable
 fun HowItWorksScreen(navController: NavController) {

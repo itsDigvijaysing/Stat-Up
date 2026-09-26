@@ -5,10 +5,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Measures the real on-device cost of a stat guess, under ART, reading the blob from assets
- * exactly as the app does. Not a correctness test - `HashedLinearTaskClassifierTest` covers
- * that - this exists to keep the classifier honest about being cheap enough to run on the
- * keystroke path of a mid-range phone.
+ * Measures the real on-device classification cost under ART - not a correctness test
+ * (`HashedLinearTaskClassifierTest` covers that), just that it stays cheap on the keystroke path.
  */
 class ClassifierBenchmarkTest {
 

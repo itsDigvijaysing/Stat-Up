@@ -153,9 +153,8 @@ fun StatusWindow(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Footer - both rank requirements plus the streak. The promotion gates sit here
-        // rather than in a separate block below: three values the user can compare at a
-        // glance, instead of a second box repeating them.
+        // Both rank requirements plus the streak, in one row rather than a separate box
+        // below - three comparable values at a glance instead of repeating them.
         StatusFooter(
             stats = stats,
             onHistoryClick = onHistoryClick
@@ -206,9 +205,8 @@ private fun StatusFooter(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.Top
     ) {
-        // Avg stat and Work Days are the two promotion gates. Showing each as `have / need`
-        // and colouring it keeps "which one is blocking me" readable without a second box -
-        // three bare numbers would have lost that.
+        // Avg stat and Work Days are the two promotion gates; shown as `have / need` and
+        // colored so "what's blocking me" reads without a second box.
         FooterItem(
             icon = Icons.Outlined.Insights,
             label = "Avg Stat",
@@ -302,9 +300,8 @@ private fun FooterItem(
 }
 
 /**
- * Shows BOTH promotion requirements at once and marks which one is blocking. The old display
- * was five stars off a single counter, which couldn't express "your days are there but your
- * stats aren't" - the exact state most users sit in.
+ * Shows both promotion requirements and marks which is blocking - the old five-star display
+ * off a single counter couldn't express "days are there but stats aren't".
  */
 @Composable
 fun RankProgressBlock(

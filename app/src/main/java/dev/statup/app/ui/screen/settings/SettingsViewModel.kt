@@ -131,9 +131,8 @@ class SettingsViewModel(
     }
 
     /**
-     * Save Gemini API key. Pass null/blank to disconnect.
-     * No validation here - the agent surfaces auth errors when the user first chats.
-     * (Gemini doesn't have a cheap ping endpoint; we don't want to burn a quota call on save.)
+     * No validation here - the agent surfaces auth errors when the user first chats; Gemini
+     * has no cheap ping endpoint to validate against on save.
      */
     fun setGeminiApiKey(key: String?) {
         viewModelScope.launch {
@@ -141,10 +140,6 @@ class SettingsViewModel(
         }
     }
 
-    /**
-     * Validates Todoist API token before saving.
-     * Returns Result with success=true if valid, or failure with error message.
-     */
     suspend fun validateAndConnectTodoist(token: String): Result<Boolean> = withContext(Dispatchers.IO) {
         if (token.isBlank()) {
             return@withContext Result.failure(Exception("Token cannot be empty"))
@@ -194,12 +189,8 @@ class SettingsViewModel(
     }
 
     /**
-     * Fabricates 200 days of history at 4 tasks a day, then lets the real recomputer derive
-     * stats, Work Days and rank from it - so the late-game screens can be inspected without
-     * the numbers being hand-faked.
-     *
-     * Intentionally has **no caller**: see [dev.statup.app.data.local.db.DemoHistorySeeder]
-     * for why it is not exposed in the UI and how to drive it during development.
+     * Intentionally has **no caller** - see [dev.statup.app.data.local.db.DemoHistorySeeder] for
+     * why it's not exposed in the UI and how to drive it during development.
      */
     @Suppress("unused")
     fun seedDemoHistory(clearFirst: Boolean) {
@@ -214,40 +205,27 @@ class SettingsViewModel(
     }
 
     /**
-     * Wipes everything and re-seeds a fresh start.
-     *
-     * **Runs on [Dispatchers.IO].** `clearAllTables()` is a *blocking* call, and `viewModelScope`
-     * is `Main.immediate`, so Room's main-thread assertion turned every Full Reset into an instant
-     * crash - the reset never happened and the app died on the spot.
-     *
-     * The `finally` is equally load-bearing: `clearAll()` wipes the first-run gate that
-     * `AppNavigation` blocks on, and that gate is otherwise only reopened at process start, so
-     * failing between the two would leave the UI on a blank frame until a force-quit.
+     * **Runs on [Dispatchers.IO]**: `clearAllTables()` is blocking, and `viewModelScope` is
+     * `Main.immediate`, so running this on Main tripped Room's assertion and crashed every reset.
      */
     fun fullReset() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-            // Clear all database tables
             database.clearAllTables()
 
-            // Clear all preferences and reset to defaults
             userPreferences.clearAll()
 
-            // Re-initialize so app doesn't crash (stats at base 5, achievements + label
-            // mappings seeded). Without re-seeding mappings here, Todoist label routing
-            // would silently fall back to the default stat until next process start.
+            // Re-initialize so app doesn't crash; without re-seeding mappings here, Todoist label
+            // routing would silently fall back to the default stat until next process start.
             playerRepository.initializeStats()
             achievementRepository.initializeAchievements()
             StatMappingSeeder.seed(database, statMappingDao)
-            // A full reset is a fresh start, so the starter content comes back with it -
-            // clearAll() already dropped the "seeded" flag, but re-seeding here means the
-            // tabs aren't empty until the next process start.
+            // A full reset re-seeds starter content too - clearAll() already dropped the "seeded"
+            // flag, so skipping this would leave the tabs empty until the next process start.
             StarterContentSeeder.seed(database, missionDao, rewardDao)
             } finally {
-                // Re-open the first-run gate in this process, whatever happened above. clearAll()
-                // wiped it and the resolver only runs at app start, so skipping this would leave the
-                // UI on a blank frame until a force-quit. Also marks the tour done and stamps the
-                // stat curve - see markResetComplete.
+                // Re-open the first-run gate whatever happened above - clearAll() wiped it and the
+                // resolver only runs at app start, so skipping this leaves a blank frame until a force-quit.
                 userPreferences.markResetComplete(dev.statup.app.rpg.StatRecomputer.CURVE_VERSION)
             }
         }

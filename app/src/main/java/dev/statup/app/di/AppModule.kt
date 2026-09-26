@@ -84,10 +84,8 @@ val appModule = module {
                     isLenient = true
                 })
             }
-            // MUST be installed before HttpTimeout (Ktor requirement) or timeouts aren't retried.
-            // Gemini's free tier returns 503 UNAVAILABLE often enough that a single attempt
-            // surfaced a dead-end error for a condition one retry clears. 429 is NOT a server
-            // error, so genuine quota exhaustion is still not retried.
+            // MUST be installed before HttpTimeout (Ktor requirement). Retries Gemini's frequent
+            // 503s; 429 (quota exhaustion) is NOT a server error, so it's correctly left unretried.
             install(io.ktor.client.plugins.HttpRequestRetry) {
                 retryOnServerErrors(maxRetries = 2)
                 exponentialDelay()
@@ -117,9 +115,8 @@ val appModule = module {
     }
 
     // AI Agent (Gemini)
-    // GeminiAgentApi resolves the API key on-demand via a suspending lambda so it always
-    // reads the latest value from encrypted storage - no need to recreate the singleton when
-    // the user updates their key in Settings.
+    // Resolves the API key on-demand via a suspending lambda, so it reads the latest value
+    // without recreating the singleton when the user updates the key in Settings.
     single<AgentApi> {
         val userPreferences = get<dev.statup.app.data.local.datastore.UserPreferences>()
         GeminiAgentApi(
@@ -154,9 +151,8 @@ val appModule = module {
         )
     }
     single { PointsRepository(get(), get(), get(), get(), get(), get()) }
-    // AchievementRepository takes an optional points-award lambda. We resolve PointsRepository
-    // lazily through the Koin container so we don't introduce a circular dependency
-    // (AchievementTracker → AchievementRepository → PointsRepository → AchievementTracker).
+    // Resolves PointsRepository lazily to avoid a circular Koin dependency:
+    // AchievementTracker -> AchievementRepository -> PointsRepository -> AchievementTracker.
     single {
         AchievementRepository(
             database = get(),
@@ -190,9 +186,8 @@ val appModule = module {
     single { dev.statup.app.rpg.AchievementUnlockNotifier() }
     single { AchievementTracker(get(), get(), get()) }
 
-    // Offline task -> stat classifier. The 96 KB blob is read from assets on first use and
-    // held for the process lifetime; passing a byte-array provider (not a Context) keeps the
-    // scoring path JVM-testable.
+    // Byte-array provider (not a Context) keeps the scoring path JVM-testable; the 96 KB blob is
+    // read from assets on first use and held for the process lifetime.
     single<TaskClassifier> {
         val context = androidContext()
         HashedLinearTaskClassifier(
@@ -220,9 +215,8 @@ val appModule = module {
             store = get<UserPreferences>(),
             missionDao = get(),
             payoutProbe = get<PointsRepository>(),
-            // Resolved lazily inside the lambda, not captured at construction: AchievementTracker
-            // depends transitively on PointsRepository, and the same trick is used for
-            // AchievementRepository's pointsAwarder above to keep the Koin graph acyclic.
+            // Resolved lazily inside the lambda, not captured at construction, to keep the Koin
+            // graph acyclic - same trick as AchievementRepository's pointsAwarder above.
             reevaluateAchievements = {
                 get<AchievementTracker>().onPointsEarned(
                     dev.statup.app.domain.model.TransactionSource.MISSION

@@ -35,10 +35,8 @@ data class HelpPoint(val title: String, val detail: String, val example: String?
  */
 @Composable
 fun HelpIconButton(onClick: () -> Unit, contentDescription: String = "How this works") {
-    // Previously a bare glyph with nothing drawn behind it - testers never registered it as
-    // tappable. It now carries the same glass circle as the other icon buttons so it reads as
-    // an affordance, while the 48dp touch target (Core App Quality Touch_Target_Size) and the
-    // quiet accent colour keep it from competing with the screen's primary action.
+    // Previously a bare glyph - testers never registered it as tappable. The glass circle now
+    // makes it read as an affordance without competing with the screen's primary action.
     Box(
         modifier = Modifier
             .size(48.dp)

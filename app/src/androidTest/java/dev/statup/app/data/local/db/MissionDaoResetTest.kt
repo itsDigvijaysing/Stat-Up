@@ -16,13 +16,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The nightly daily-mission reset, against real SQLite.
- *
- * `resetDailyCompletions()` shipped as `UPDATE missions SET isCompletedToday = 0` with no
- * `WHERE isDaily = 1`, so a mission created with the "Repeats Daily" switch **off** - a declared
- * one-off - was un-completed every midnight and could be completed for points again, indefinitely.
- * No race and no crash were needed; it was simply wrong every night. These run against Room rather
- * than a fake because the defect was in the SQL itself, which a fake cannot reproduce.
+ * Guards a regression where `resetDailyCompletions()` had no `WHERE isDaily = 1`, un-completing
+ * one-off missions every midnight - runs against real Room since a fake can't reproduce raw SQL bugs.
  */
 @RunWith(AndroidJUnit4::class)
 class MissionDaoResetTest {

@@ -10,18 +10,13 @@ import dev.statup.app.domain.model.StatType
 import kotlinx.coroutines.flow.first
 
 /**
- * Seeds one starter mission per stat and a 50 → 1000 reward ladder, so the Tasks and Rewards
- * tabs open with something in them instead of the empty screens that left testers with nothing
- * to do after onboarding. The ladder teaches the economy by itself.
- *
- * Gated on a DataStore flag rather than "is the table empty", because deleting the samples has
- * to be permanent - an emptiness check would resurrect them on the next launch.
+ * Seeds one starter mission per stat and a 50 → 1000 reward ladder so Tasks/Rewards aren't empty
+ * after onboarding. Gated on a DataStore flag, not emptiness - deleting samples must be permanent.
  */
 object StarterContentSeeder {
 
-    // One per stat, so the hexagon fills evenly and every stat has a worked example.
-    // Descriptions stay short and do NOT name the stat - the card already shows a stat chip,
-    // so repeating it just made every row longer than it needed to be.
+    // One per stat, so the hexagon fills evenly. Descriptions omit the stat name - the
+    // card already shows a stat chip, so repeating it just lengthened every row.
     private val MISSIONS = listOf(
         Mission("Workout", "Any real physical effort", StatType.STR),
         Mission("Study or Learn Something", "Study or solve something", StatType.INT),
@@ -44,12 +39,8 @@ object StarterContentSeeder {
     private const val MISSION_POINTS = 4
 
     /**
-     * The cheapest reward on the ladder - the one the guided tutorial steers the user toward, and
-     * the only one they can afford at the end of it.
-     *
-     * Derived from [REWARDS] rather than restated, because the tutorial's arithmetic has zero
-     * slack: the tutorial task plus the first-task achievement must cover this exactly. See
-     * `TutorialArithmeticTest`, which fails if a change to any of the three breaks the loop.
+     * The cheapest reward, which the tutorial steers toward and the user can just afford -
+     * derived from [REWARDS], not restated, since the tutorial's arithmetic has zero slack.
      */
     private val cheapestReward get() = REWARDS.minBy { it.cost }
     val CHEAPEST_REWARD_NAME: String get() = cheapestReward.name
@@ -68,18 +59,8 @@ object StarterContentSeeder {
     }
 
     /**
-     * Seeds anything missing. Used after `clearAllTables()` during a full reset, and as the body of
-     * [seedIfNeeded].
-     *
-     * Skips entries that already exist **by name**, so a crash between this transaction committing
-     * and the flag being written cannot duplicate all 13 items on the next launch. Writing the flag
-     * first would be worse - a crash there would mean the user never gets starter content at all.
-     * Same name-keyed approach `TutorialCoordinator` uses for its own mission, for the same reason.
-     *
-     * Consequence worth knowing: a user-created item sharing a starter name suppresses that starter
-     * entry. Unreachable on today's paths - existing installs never seed, and fresh installs and full
-     * resets both seed before any user content can exist - but it is a real property of matching on
-     * names rather than ids.
+     * Seeds anything missing, matched **by name** so a crash between committing and writing the
+     * flag can't duplicate items - writing the flag first would risk skipping seeding entirely.
      */
     suspend fun seed(database: AppDatabase, missionDao: MissionDao, rewardDao: RewardDao) {
         val now = System.currentTimeMillis()

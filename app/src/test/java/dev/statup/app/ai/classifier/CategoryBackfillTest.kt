@@ -10,10 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The backfill's whole safety property is that it only ever fills in blanks. These tests pin
- * that, plus the accumulator credit that makes newly-categorised history actually count.
- */
+/** Pins the backfill's safety property (only ever fills in blanks) and its accumulator credit. */
 class CategoryBackfillTest {
 
     @Test
@@ -98,10 +95,7 @@ class CategoryBackfillTest {
         assertEquals(null, stats.written)
     }
 
-    /**
-     * Progress is per chunk, not per row. Per-row reporting meant one state update - and so one
-     * recomposition - for every transaction, which is what made a long backfill janky.
-     */
+    /** Progress is per chunk, not per row - per-row reporting recomposed on every transaction. */
     @Test
     fun `progress is reported once per chunk`() = runTest {
         val store = FakeEarnStore((1L..5L).map { UncategorisedEarn(it, "row $it", 1) })
@@ -124,11 +118,7 @@ class CategoryBackfillTest {
         assertEquals(listOf(50 to 120, 100 to 120, 120 to 120), seen)
     }
 
-    /**
-     * Credit is applied per chunk, so a failure part-way through leaves the completed chunks paid
-     * for. Previously every row was assigned first and all credit applied at the very end, so an
-     * interrupted run left rows categorised with nothing to show for it.
-     */
+    /** Credit is applied per chunk so a failure part-way through leaves completed chunks paid for. */
     @Test
     fun `credit lands per chunk rather than only at the end`() = runTest {
         val rows = (1L..60L).map { UncategorisedEarn(it, "row $it", 5) }

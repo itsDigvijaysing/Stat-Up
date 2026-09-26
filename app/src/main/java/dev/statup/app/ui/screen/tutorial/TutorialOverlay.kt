@@ -32,10 +32,7 @@ import dev.statup.app.ui.components.glass.GlassButton
 import dev.statup.app.ui.navigation.Routes
 import dev.statup.app.ui.theme.*
 
-/**
- * Announces the tour before it starts, so the user knows what is happening rather than
- * wondering why the app is talking to them. Pulsing mark plus an explicit opt-in.
- */
+/** Announces the tour before it starts, so the user isn't left wondering why the app is talking to them. */
 @Composable
 fun TutorialIntroDialog(onStart: () -> Unit, onSkip: () -> Unit) {
     val pulse = rememberInfiniteTransition(label = "introPulse")
@@ -120,17 +117,8 @@ fun TutorialIntroDialog(onStart: () -> Unit, onSkip: () -> Unit) {
 }
 
 /**
- * The coach-mark strip for the guided first run. Kept slim and pinned above the bottom bar,
- * and it fades out on a cycle so it never permanently covers the thing it is pointing at.
- *
- * It does not navigate. When the step lives on another tab it names that tab and the bottom
- * bar pulses it, so the user learns the layout by moving through it themselves.
- *
- * The achievement step has no target tab at all - the unlock popup comes to the user - so this
- * strip only narrates it. **The strip is display-only: it has no button and no tap handler**, so it
- * cannot complete a step. If the popup never fires (the achievement was already unlocked on an
- * earlier run) the step is advanced by `AppNavigation`, which waits for the payout transaction to
- * land. Do not delete that wait on the assumption this strip is a fallback - it is not.
+ * Coach-mark strip for the guided first run - display-only, never navigates. The achievement step
+ * is advanced by AppNavigation awaiting the payout tx; don't remove that wait as a "fallback".
  */
 @Composable
 fun TutorialOverlay(
@@ -141,8 +129,8 @@ fun TutorialOverlay(
     /** False on hidden detail screens, where there is no tab to point at. */
     hasBottomBar: Boolean,
     /**
-     * Abandons the tour. Present on every step, not just the intro: without an exit here, a step the
-     * user cannot complete has no way out, which is exactly how the earlier dead ends were reachable.
+     * Abandons the tour. Present on every step - without an exit, an uncompletable step
+     * has no way out, which is how the earlier dead ends were reachable.
      */
     onSkip: () -> Unit,
     modifier: Modifier = Modifier
@@ -166,9 +154,8 @@ fun TutorialOverlay(
             .border(1.5.dp, AccentPrimary.copy(alpha = borderAlpha), shape)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        // INTRO is ordinal 0 and is never rendered here (AppNavigation filters it out), so the
-        // three real steps read 1..3. That only holds while INTRO stays first in the enum -
-        // inserting a step before it silently renumbers every label.
+        // INTRO is ordinal 0 and filtered out here, so real steps read 1..3 - only holds while
+        // INTRO stays first in the enum; inserting a step before it renumbers every label.
         Text(
             text = "STEP ${step.ordinal} OF 3",
             color = AccentPrimary,

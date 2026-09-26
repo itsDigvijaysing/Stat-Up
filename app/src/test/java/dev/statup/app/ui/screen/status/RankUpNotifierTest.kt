@@ -11,11 +11,8 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class RankUpNotifierTest {
 
-    /**
-     * Reproduces the off-screen rank-up bug: a rank-up that fires while the Status screen
-     * is not composed (no collector) must still reach the next collector exactly once when
-     * the screen returns. A replay=0 SharedFlow drops it; a Channel-backed flow buffers it.
-     */
+    /** Reproduces the off-screen rank-up bug: a replay=0 SharedFlow drops an event fired with
+     * no collector; the Channel-backed flow buffers it for the next one instead. */
     @Test
     fun `rank-up sent with no active collector is delivered to the next collector`() = runTest {
         val notifier = RankUpNotifier()

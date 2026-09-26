@@ -14,10 +14,8 @@ import org.junit.Test
 import java.time.LocalDate
 
 /**
- * JVM tests for [DecayEngine.applyDailyDecay] - the daily-tick heart. Uses hand-written fakes for
- * the narrow ports (no Android / Room), matching the project's test style. The atomicity wrapper
- * is exercised via a pass-through [Transactor]; the read-modify-write logic and the idempotency
- * gate are what's under test here.
+ * JVM tests for [DecayEngine.applyDailyDecay], using hand-written fakes for the narrow ports
+ * (no Android/Room) - the atomicity wrapper is a pass-through [Transactor].
  */
 class DecayEngineTest {
 
@@ -54,10 +52,8 @@ class DecayEngineTest {
     }
 
     /**
-     * The crash window: the old guard was a DataStore key written *after* the transaction committed,
-     * so a process death in between meant the next run saw no marker and applied the day twice -
-     * a second stat point lost, or a second Streak Shield burned. The Room marker commits with the
-     * mutation, so an empty DataStore key is no longer enough to re-run it.
+     * Guards the old bug: a DataStore marker written *after* commit meant a crash in between let
+     * the next run double-apply decay. The Room marker now commits atomically with the mutation.
      */
     @Test
     fun `a second run with no DataStore marker is still a no-op`() = runTest {
@@ -221,9 +217,8 @@ class DecayEngineTest {
     }
 
     /**
-     * Stores rows so the in-transaction day marker actually works. The engine now writes a synthetic
-     * `day_processed` row per handled day alongside any decay row, so the two are kept apart here -
-     * [decayRows] is what the loss assertions care about.
+     * The engine writes a synthetic `day_processed` marker row per handled day alongside any
+     * decay row - kept apart here; [decayRows] is what the loss assertions care about.
      */
     private class FakeDecayLogDao : DecayLogDao {
         val rows = mutableListOf<DecayLogEntity>()

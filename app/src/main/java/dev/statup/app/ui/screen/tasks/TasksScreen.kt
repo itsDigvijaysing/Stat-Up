@@ -69,9 +69,8 @@ fun TasksScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val hapticTick = rememberHapticTick()
 
-    // Re-run on every tab re-entry (not just initial composition).
-    // - resetDailyMissions: catches midnight rollover while app stays open
-    // - loadTodoistTasks: gives user fresh active-task list every time they open the tab
+    // Re-run on every tab re-entry, not just initial composition, so midnight rollover and
+    // stale Todoist tasks both get caught when the user comes back to this tab.
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             viewModel.resetDailyMissions()
@@ -85,10 +84,8 @@ fun TasksScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                // No bottom padding: the Scaffold already reserves the bar's height, and
-                // padding on top of that leaves a bare strip between the last card and the
-                // bar's bright top edge, which reads as a drawn black line. Letting the list
-                // run to the bar also gives the glass bar something to actually blur.
+                // No bottom padding - the Scaffold already reserves the bar's height; extra
+                // padding leaves a bare strip that reads as a drawn black line.
                 .padding(start = 16.dp, end = 16.dp, top = 16.dp)
         ) {
             // Header
@@ -182,9 +179,8 @@ private fun TasksList(
     ) {
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            // No bottom padding: the Scaffold already reserves the bar's height, so any padding
-            // on top of it leaves a strip of bare background between the last card and the
-            // bar's bright top edge - which reads as a drawn black line.
+            // No bottom padding - the Scaffold already reserves the bar's height; extra
+            // padding here reads as a drawn black line above the bar.
             contentPadding = PaddingValues(bottom = 0.dp),
             modifier = Modifier.fillMaxSize()
         ) {
@@ -566,9 +562,8 @@ private fun CreateMissionDialog(
     var points by remember { mutableStateOf("4") }
     var isDaily by remember { mutableStateOf(true) }
 
-    // The picker used to open hardcoded on STR regardless of the task. It now starts on the
-    // user's default stat and moves to the classifier's guess until they pick one themselves -
-    // after which their choice is never overridden.
+    // Starts on the user's default stat, then the classifier's guess, until the user picks
+    // one themselves - after which their choice is never overridden.
     val defaultStat = rememberDefaultStat()
     var pickedStat by remember { mutableStateOf<StatType?>(null) }
     val suggestion = rememberStatSuggestion(name)

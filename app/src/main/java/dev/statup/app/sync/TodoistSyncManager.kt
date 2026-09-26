@@ -23,16 +23,8 @@ class TodoistSyncManager(
         }
 
         return try {
-            // Always request the endpoint's maximum. /tasks/completed is hard-capped at 200
-            // and exposes no cursor (measured 2026-08-21: response is {items, projects,
-            // sections} with no next_cursor), so there is nothing to gain by asking for less -
-            // and asking for only 30 meant a burst of completions between syncs could fall off
-            // the end. externalId dedupe makes the re-read free.
-            //
-            // NOTE: 200 is therefore a ceiling on total importable history via this endpoint.
-            // Reaching further back needs /tasks/completed/by_completion_date, which pages in
-            // 3-month windows but keys items by TASK id where this one keys by COMPLETION id -
-            // switching would re-award everything already imported. See docs/ for the plan.
+            // /tasks/completed is hard-capped at 200, no cursor; dedupe makes re-reads free.
+            // Don't switch to by_completion_date - it keys by TASK id and would re-award history.
             val result = todoistApi.getCompletedTasks(token, limit = MAX_COMPLETED_PER_SYNC)
 
             result.fold(
@@ -56,12 +48,8 @@ class TodoistSyncManager(
 
                         val points = StatsEngine.calculateTaskPoints(completedTask.priority)
                         val labels = completedTask.labels
-                        // Resolution order: a Todoist label the user mapped wins outright;
-                        // otherwise the offline classifier reads the task title. An unlabelled
-                        // task used to arrive with statType = null - the points landed in the
-                        // balance and grew no stat at all. When the model isn't confident the
-                        // behaviour is unchanged from before, so this can only add stats,
-                        // never mis-assign one that was previously correct.
+                        // Resolution order: mapped label wins, then the offline classifier, then
+                        // null (unchanged from before) - this can only add stats, never mis-assign.
                         val statType = pointsRepository.routeByLabel(labels, mappingsCache)
                             ?: (if (autoCategorise) taskClassifier.classify(completedTask.content)?.stat else null)
                             ?: if (labels.isNotEmpty()) defaultStat() else null
@@ -84,12 +72,8 @@ class TodoistSyncManager(
 
                     userPreferences.setLastSyncTime(System.currentTimeMillis())
 
-                    // Run achievement checks ONCE after the loop and off the sync's critical
-                    // path. onPointsEarned keys off cumulative totals (it writes absolute
-                    // progress), so once-after-the-loop is identical to per-task - but a thrown
-                    // achievement check can no longer downgrade an already-successful, already
-                    // idempotently-awarded sync to a retry + false "sync failed" notification.
-                    // It also collapses ~N achievement passes (one per task) into a single pass.
+                    // Run once after the loop, not per task - onPointsEarned uses cumulative totals so
+                    // this is equivalent, and a thrown check can't turn a successful sync into a false failure.
                     if (tasksProcessed > 0) {
                         runCatching { achievementTracker.onPointsEarned(TransactionSource.TODOIST) }
                     }

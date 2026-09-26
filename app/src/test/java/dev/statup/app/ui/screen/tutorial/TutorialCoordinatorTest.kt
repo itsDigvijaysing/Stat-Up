@@ -13,11 +13,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The tour's state machine. Two real defects lived here before it was covered: progress that
- * only existed in memory (a restart replayed the intro and asked for work already paid for),
- * and a seed keyed on a remembered row id (a restart seeded a second sample mission).
- */
+/** Covers two real defects: in-memory-only progress (a restart replayed the intro) and a
+ * seed keyed on a remembered row id (a restart seeded a second sample mission). */
 class TutorialCoordinatorTest {
 
     @Test
@@ -174,11 +171,8 @@ class TutorialCoordinatorTest {
         assertTrue("sample mission cleaned up", dao.missions.isEmpty())
     }
 
-    /**
-     * The tour tells the user their exact balance and then asks them to spend all of it, so the
-     * arithmetic must cover the reward. It happens to be exact today (5 + 45 = 50), which means
-     * there is no slack at all - this fails if any of the three constants moves.
-     */
+    /** The arithmetic is exact (5 + 45 = 50) with no slack - fails if any of the three
+     * constants moves. */
     @Test
     fun `the tutorial's earnings cover the reward it steers toward`() {
         val earned = TutorialCoordinator.TUTORIAL_TASK_POINTS + TutorialCoordinator.FIRST_TASK_REWARD

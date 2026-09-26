@@ -6,13 +6,8 @@ import dev.statup.app.domain.model.PlayerStats
 data class StatProgress(val stat: Int, val accumulator: Int)
 
 /**
- * Pure math for stat/points calculations. Used to host instance methods that wrapped
- * `PointsRepository.earnPoints` for each earn type (task / manual / mood / mission),
- * but every ViewModel went straight to `PointsRepository.addPoints` instead, so those
- * wrappers were dead code and were removed.
- *
- * Kept as a class (not an `object`) so it can stay in Koin and keep room for future
- * stat math that legitimately needs DI.
+ * Pure math for stat/points calculations. Kept as a class (not `object`) so it stays in
+ * Koin and leaves room for future stat math needing DI.
  */
 @Suppress("unused")
 class StatsEngine {
@@ -33,16 +28,8 @@ class StatsEngine {
         }
 
         /**
-         * Add [points] to one stat's accumulator and convert every whole
-         * [PlayerStats.POINTS_PER_STAT] into a stat point.
-         *
-         * A stat already at [PlayerStats.MAX_STAT] freezes: the accumulator is left exactly as
-         * it was and the points are discarded rather than being computed into a gain that the
-         * cap then erases (a leak that was invisible to the user). Points that would push past
-         * the cap drop their remainder for the same reason.
-         *
-         * Extracted from `PointsRepository` so the conversion rule is unit-testable on the JVM
-         * and so the one-time recompute can reuse the exact same arithmetic.
+         * A stat at [PlayerStats.MAX_STAT] freezes: points are discarded rather than computed
+         * into a gain the cap then erases (previously an invisible leak).
          */
         fun applyPoints(currentStat: Int, currentAccumulator: Int, points: Int): StatProgress {
             if (currentStat >= PlayerStats.MAX_STAT) {
@@ -58,9 +45,8 @@ class StatsEngine {
         }
 
         /**
-         * Rebuild one stat from the lifetime points ever earned in it. Used by the one-time
-         * recompute after the conversion rate changed - equivalent to replaying every earn
-         * through [applyPoints] from a fresh character.
+         * Rebuild one stat from lifetime points earned - used by the one-time recompute after
+         * the conversion rate changed, equivalent to replaying every earn from a fresh character.
          */
         fun statFromLifetimePoints(lifetimePoints: Int): StatProgress =
             applyPoints(PlayerStats.BASE_STAT, 0, lifetimePoints)

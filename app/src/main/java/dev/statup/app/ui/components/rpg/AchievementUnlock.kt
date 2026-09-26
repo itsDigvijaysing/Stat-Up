@@ -31,25 +31,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import dev.statup.app.ui.components.glass.GlassButton
 import dev.statup.app.ui.theme.*
 
-/**
- * The celebration when an achievement unlocks.
- *
- * Unlocks used to be silent - the points simply appeared and the trophy sat somewhere in a
- * long list, so the single most rewarding moment in the app went unnoticed unless the user
- * happened to open the Achievements screen. This puts it in front of them, once, with a
- * deliberate dismiss.
- *
- * Styled to the app's glass language rather than a system dialog: gold halo behind the emoji,
- * a slow breathing glow, and a pop-in scale on entry.
- */
+/** The celebration overlay shown when an achievement unlocks. */
 @Composable
 fun AchievementUnlockedDialog(
     achievement: Achievement,
     onDismiss: () -> Unit,
     /**
-     * Space to keep clear at the bottom. During the guided tour the coach-mark strip is anchored
-     * there and drawn after this, so without reserving room it covers the dismiss button - the very
-     * tap that advances the tour. Callers outside the tour pass zero.
+     * Space to keep clear at the bottom - the guided-tour coach-mark strip is drawn there after
+     * this dialog, so without it the strip would cover the dismiss button. Callers outside the tour pass zero.
      */
     bottomReserved: Dp = 0.dp
 ) {
@@ -79,12 +68,8 @@ fun AchievementUnlockedDialog(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // Real backdrop blur, not a blackout: the app stays visible behind the
-            // celebration so it reads as something happening *in* the app. This has to be an
-            // in-tree overlay rather than a Dialog, because a Dialog is its own window and
-            // Haze can only sample content from the same composition as its source.
-            // Blurred, lightly tinted - the app should read as out of focus behind the
-            // celebration, not blacked out.
+            // In-tree overlay, not a Dialog - a Dialog is its own window, so Haze couldn't sample
+            // the app behind it. Blurred and lightly tinted so the app reads as out of focus, not blacked out.
             .background(BackgroundBase.copy(alpha = 0.22f))
             // Swallows taps so the screen underneath cannot be operated through the overlay.
             .clickable(
@@ -104,9 +89,8 @@ fun AchievementUnlockedDialog(
                     .fillMaxWidth()
                     .scale(cardScale)
                     .clip(RoundedCornerShape(24.dp))
-                    // Opaque base FIRST, then the gold wash on top. A gradient whose first
-                    // stop is translucent gold let the screen behind show through the top of
-                    // the card - a celebration has to be solid to read.
+                    // Opaque base first, then the gold wash - a gradient starting translucent let the
+                    // screen behind show through the top of the card, and a celebration needs to read as solid.
                     .background(BackgroundSurface)
                     .background(
                         Brush.verticalGradient(

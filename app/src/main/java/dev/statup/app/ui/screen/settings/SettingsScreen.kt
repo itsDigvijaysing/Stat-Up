@@ -40,13 +40,8 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 /**
- * Prominent disclosure for the AI Coach, shown in the connect dialog directly above the API-key
- * field so the user reads it before the affirmative action that enables sharing.
- *
- * Google Play's User Data policy requires an in-app disclosure - not a buried settings page or a
- * privacy-policy-only mention - whenever an app sends user data somewhere the user would not
- * otherwise expect. Sending player state to Google's servers from an app advertised as
- * offline-first is exactly that case.
+ * Shown above the API-key field: Play's User Data policy requires in-app disclosure before the
+ * affirmative action that enables sharing - not just a privacy-policy mention.
  */
 @Composable
 private fun DataSharingDisclosure() {
@@ -210,11 +205,8 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Preferences Section
-        // Offline re-categorisation of completed tasks that never got a stat. Sits with the
-        // task integrations because that is where uncategorised history comes from.
-        // One card, one concern. The toggle and the manual pass used to be two stacked
-        // cards for the same feature, which read as two unrelated settings.
+        // Offline re-categorisation of completed tasks that never got a stat, kept as one card -
+        // the toggle and manual pass used to be two stacked cards for the same feature.
         SettingsSection(title = "Task Categories") {
             TaskCategoriesCard(
                 enabled = uiState.autoCategorise,
@@ -229,10 +221,8 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         SettingsSection(title = "Preferences") {
-            // Both of these used to be grids of title+description cards - two rows of them
-            // for the quote source - which cost most of a screen for two rarely-touched
-            // settings. Chips carry the same choice in one line, with the description shown
-            // only for whatever is currently selected.
+            // Both used to be grids of title+description cards - two rows just for quote source.
+            // Chips carry the same choice in one line, showing only the selected option's hint.
             CompactChoice(
                 title = "Hexagon Style",
                 options = listOf(
@@ -1035,9 +1025,8 @@ private fun ResetConfirmationDialog(
 }
 
 /**
- * Everything about automatic stat categories in a single card: the switch that governs
- * whether the on-device model runs at all, and - only when there is work to do - the action
- * that applies it to history. Splitting these into two cards implied two separate features.
+ * Everything about automatic stat categories in one card - splitting the toggle and the manual
+ * pass into two cards implied two separate features.
  */
 @Composable
 private fun TaskCategoriesCard(
@@ -1161,10 +1150,8 @@ private fun TaskCategoriesCard(
 private data class ChoiceOption(val value: String, val label: String, val hint: String)
 
 /**
- * A compact single-select: a title, a wrapped row of chips, and the selected option's hint.
- *
- * Replaces the card grids that previously rendered every option's title AND description at
- * full width - four options meant two rows of tall cards for a setting most users touch once.
+ * Replaces card grids that rendered every option's title AND description at full width - four
+ * options meant two rows of tall cards for a setting most users touch once.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

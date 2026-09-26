@@ -4,10 +4,8 @@ import dev.statup.app.domain.model.PlayerStats
 import dev.statup.app.domain.model.Rank
 
 /**
- * Narrow read/write surface that [DecayEngine] needs from the player-stats store. Implemented by
- * [dev.statup.app.data.repository.PlayerRepository]; depending on this interface (instead of
- * the concrete repository) lets DecayEngine be unit-tested on the JVM with a hand-written fake -
- * no Android, no Room.
+ * Narrow read/write surface [DecayEngine] needs, implemented by [dev.statup.app.data.repository.PlayerRepository];
+ * depending on this interface lets DecayEngine be JVM-unit-tested with a hand-written fake.
  */
 interface DecayStatsStore {
     suspend fun getStatsOnce(): PlayerStats?
@@ -25,13 +23,8 @@ interface DecayDayStore {
 }
 
 /**
- * Runs [block] inside a single DB transaction so the daily tick's read-modify-write of the
- * singleton player_stats row is atomic with concurrent earn / redeem / buy-shield transactions.
- * Without this, a late-firing decay (e.g. 02:15 while the user is earning) could clobber a
- * just-purchased Streak Shield or freshly-earned stat points with its stale full-row write.
- *
- * Implemented in production by [dev.statup.app.data.local.db.RoomTransactor]; JVM tests use
- * a pass-through fake.
+ * Runs [block] atomically so the daily tick's read-modify-write can't clobber a concurrent
+ * earn/redeem/buy-shield with a stale full-row write.
  */
 interface Transactor {
     suspend fun <R> transaction(block: suspend () -> R): R

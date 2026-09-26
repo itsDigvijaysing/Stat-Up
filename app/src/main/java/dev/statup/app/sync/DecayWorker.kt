@@ -23,13 +23,11 @@ class DecayWorker(
     override suspend fun doWork(): Result {
         return try {
             val result = decayEngine.applyDailyDecay()
-            // Reset daily missions at the midnight tick so completed dailies clear even on days
-            // the user never opens the Tasks tab. Idempotent (gated on lastMissionResetDay) and
-            // decay's own marker means a retry here can't re-apply decay.
+            // Resets daily missions even on days the user never opens Tasks; idempotent via
+            // lastMissionResetDay, independent of decay's own retry marker.
             missionRepository.resetDailyIfNeeded()
-            // Re-engagement nudges on the reminders channel. Only the consequential outcomes -
-            // a rank change or a shield absorbing an idle day - notify; ordinary active/idle days
-            // and already-applied no-ops stay silent to avoid daily spam.
+            // Only consequential outcomes (rank change, shield consumed) notify - ordinary
+            // active/idle days stay silent to avoid daily spam.
             when (result) {
                 is DailyDecayResult.ActiveWithRankUp -> notifier.showRankUp(result.newRank.name)
                 is DailyDecayResult.IdleWithRankDown -> notifier.showRankDown(result.newRank.name)

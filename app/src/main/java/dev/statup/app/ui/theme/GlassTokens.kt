@@ -16,11 +16,8 @@ object GlassTokens {
 
     // Blur
     /**
-     * Backdrop blur applied to the CONTENT behind a modal overlay (achievement celebration,
-     * redeem confirmation). Blurring the content rather than the overlay avoids Haze's
-     * source/effect relationship entirely - an effect nested inside the haze source cannot
-     * reliably blur that source, which is why the redeem sheet stayed sharp while the
-     * shell-level celebration blurred correctly.
+     * Blur applied to CONTENT behind a modal, not the overlay - an effect nested inside the
+     * Haze source can't reliably blur that same source (redeem sheet stayed sharp otherwise).
      */
     val ModalBackdropBlur: Dp = 10.dp
 

@@ -12,13 +12,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Starter content seeding.
- *
- * `seedIfNeeded` writes the rows and only then sets its DataStore flag. A crash in between used to
- * duplicate all 13 items on the next launch, because the inserts use generated ids with no
- * uniqueness on `name`. Setting the flag first would be worse - a crash there means the user never
- * gets starter content at all - so the seed itself is idempotent by name instead. This test is the
- * "seed succeeded, flag write did not" scenario: call [StarterContentSeeder.seed] twice.
+ * `seedIfNeeded` writes rows then sets its DataStore flag, so a crash in between must not
+ * duplicate rows on retry - the seed itself is idempotent by name to cover that gap.
  */
 @RunWith(AndroidJUnit4::class)
 class StarterContentSeederTest {

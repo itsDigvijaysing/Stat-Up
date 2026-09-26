@@ -54,9 +54,8 @@ fun GlassBottomBar(
     val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
     Box(
-        // No fixed height: the glass must paint all the way to the screen edge (the app is
-        // edge-to-edge), while the nav items sit above the system navigation bar. The Row
-        // below owns the height - BottomBarHeight for content, plus the navigation-bar inset.
+        // No fixed height: glass paints to the screen edge (edge-to-edge app); the Row below
+        // owns height via BottomBarHeight plus the navigation-bar inset.
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
@@ -169,17 +168,14 @@ private fun BottomNavItemView(
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // FIXED-size indicator slot (48x32) for every item, selected or not. The pill used
-        // to exist only while selected inside a wrap-content Box, so selecting a tab grew
-        // that item and re-laid-out the whole SpaceEvenly row - the visible "bar nudge" on
-        // every tab tap. With constant geometry, only colors/alpha animate.
+        // FIXED-size indicator slot for every item, selected or not - the pill used to grow a
+        // wrap-content Box on selection, re-laying-out the whole row (visible "bar nudge").
         Box(
             modifier = Modifier.size(width = 48.dp, height = 32.dp),
             contentAlignment = Alignment.Center
         ) {
-            // The tutorial's pointer. An outlined ring, NOT a filled pill: a filled pill is
-            // exactly how this bar draws the *selected* tab, so highlighting that way told the
-            // user "you are here" when it meant "tap here". Background stays default.
+            // Outlined ring, NOT a filled pill - a filled pill is how this bar draws the
+            // *selected* tab, so it would read "you are here" instead of "tap here".
             if (isHighlighted && !isSelected) {
                 Box(
                     modifier = Modifier

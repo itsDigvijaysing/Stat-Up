@@ -5,10 +5,7 @@ import dev.statup.app.domain.model.QuoteSource
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
 
-/**
- * Narrow persistence slice for the daily quote (implemented by UserPreferences; faked in
- * unit tests - same pattern as PlayerStateProvider).
- */
+/** Narrow persistence slice for the daily quote (implemented by UserPreferences). */
 interface DailyQuoteStore {
     /** The user's chosen [QuoteSource] name (Settings). Defaults to OFFLINE. */
     suspend fun getQuoteSource(): String
@@ -20,19 +17,8 @@ interface DailyQuoteStore {
 }
 
 /**
- * Resolves "today's quote" exactly once per local day per source setting.
- *
- * Resolution order:
- *  1. Cache hit for (today, current source) → return it. No network. This is what keeps
- *     Animechan's tight 5 req/HOUR free tier comfortable: at most one request per day,
- *     and only when the user has opted into an online source.
- *  2. OFFLINE source → deterministic pick from the bundled pack (no network ever).
- *  3. ANIME / MOTIVATION → fetch from the API; any failure falls back to the bundled
- *     pack so the card never shows an error or blank.
- *  4. MIXED → alternates anime/motivation by epoch day parity.
- *
- * Changing the source in Settings changes the cache key, so the card updates immediately
- * without waiting for midnight.
+ * Resolves "today's quote" once per local day per source, caching by (date, source) so a
+ * Settings change refreshes immediately. Online failures fall back to the bundled pack silently.
  */
 class QuoteRepository(
     private val store: DailyQuoteStore,

@@ -12,19 +12,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Mission completion, which had two independent ways to pay for the same work twice.
- *
- * The double-tap: the old implementation read the row, checked the flag and wrote it back as three
- * separate steps. `getById` suspends, so a second tap interleaves there, both callers see
- * `isCompletedToday = false`, and both award. The fix is a conditional UPDATE - these tests drive it
- * through a fake DAO that honours the condition, so they fail against an unconditional write.
- *
- * The one-off: `resetDailyCompletions()` had no `WHERE isDaily = 1`, so a mission created with
- * "Repeats Daily" off was un-completed every midnight and could be farmed indefinitely. That needed
- * no race at all. [MissionDaoResetTest] covers the SQL; here we cover the repository's guard for rows
- * the shipped build had already un-completed.
- */
+/** Covers two real double-pay bugs: a double-tap race (fixed by a conditional UPDATE, tested
+ * via a fake DAO that honours it) and a one-off mission farmable via the daily midnight reset. */
 class MissionRepositoryTest {
 
     @Test
@@ -169,10 +158,8 @@ class MissionRepositoryTest {
         override suspend fun <R> transaction(block: suspend () -> R): R = block()
     }
 
-    /**
-     * Snapshots the rows and restores them if the block throws - a pass-through transactor would let
-     * the rollback test pass without any rollback actually happening.
-     */
+    /** Snapshots and restores rows on throw - a pass-through transactor would let the rollback
+     * test pass without any rollback actually happening. */
     private class RollbackTransactor(private val dao: FakeMissionDao) : Transactor {
         override suspend fun <R> transaction(block: suspend () -> R): R {
             val snapshot = dao.rows.toMap()

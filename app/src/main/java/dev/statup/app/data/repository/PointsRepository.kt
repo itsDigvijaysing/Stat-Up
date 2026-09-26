@@ -61,11 +61,8 @@ class PointsRepository(
     override suspend fun hasBeenAwarded(missionId: Long): Boolean =
         transactionDao.countMissionAwards(missionId.toString()) > 0
 
-    /**
-     * Insert the transaction, increment totals + stat accumulator. All DB writes happen
-     * inside a single Room transaction so concurrent earns can't tear a stat update
-     * apart from its accumulator/total counterpart.
-     */
+    /** All writes run in a single Room transaction so a concurrent earn can't tear a stat
+     * update apart from its accumulator/total counterpart. */
     suspend fun addPoints(
         points: Int,
         type: TransactionType,
@@ -109,13 +106,8 @@ class PointsRepository(
         return addPoints(points, TransactionType.EARN, source, description, statType, relatedId, externalId)
     }
 
-    /**
-     * Idempotent earn keyed by [externalId] - used by Todoist sync. Returns the new
-     * transaction on first call, or null if a transaction with the same externalId
-     * already exists (race winner / prior sync run). The unique index on
-     * `transactions.externalId` plus `OnConflictStrategy.IGNORE` makes the check race-safe
-     * even when two sync runs overlap.
-     */
+    /** Idempotent earn keyed by [externalId] for Todoist sync - null if it already exists.
+     * Race-safe via the unique index on `externalId` + `OnConflictStrategy.IGNORE`. */
     suspend fun tryEarnExternalPoints(
         externalId: String,
         points: Int,
@@ -164,13 +156,8 @@ class PointsRepository(
         transaction.copy(id = id).toDomain()
     }
 
-    /**
-     * Buy one Streak Freeze Shield for [PlayerStats.SHIELD_COST] points. Balance check,
-     * REDEEM insert, and shield increment run in a single Room transaction (balance is
-     * re-read live inside it - same pattern as RewardRepository.redeemReward), so a
-     * concurrent redemption can't drive the balance negative. Returns the new shield
-     * count, or fails with [InsufficientPointsException] / max-shields.
-     */
+    /** Balance check, REDEEM insert and shield increment run in one Room transaction (balance
+     * re-read live inside it), so a concurrent redemption can't drive it negative. */
     suspend fun buyStreakShield(): Result<Int> = runCatching {
         database.withTransaction {
             val stats = playerStatsDao.getStatsOnce()
@@ -257,10 +244,8 @@ class PointsRepository(
     suspend fun routeToStatCached(labels: List<String>, mappings: List<StatMappingEntity>): StatType =
         routeByLabel(labels, mappings) ?: getDefaultStat()
 
-    /**
-     * Label routing with no fallback: returns null when no label maps to a stat, so the caller
-     * can try the offline classifier before settling for the default.
-     */
+    /** No fallback: returns null when no label maps, so the caller can try the classifier
+     * before settling for the default. */
     fun routeByLabel(labels: List<String>, mappings: List<StatMappingEntity>): StatType? {
         for (label in labels) {
             val mapping = mappings.find { it.sourceName.equals(label, ignoreCase = true) }

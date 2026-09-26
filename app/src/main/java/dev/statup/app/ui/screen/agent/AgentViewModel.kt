@@ -29,14 +29,11 @@ class AgentViewModel(
     private var sendCounter = 0
 
     init {
-        // Reactive: any change to the Gemini key (added/removed in Settings) immediately
-        // updates isConfigured - the screen doesn't need to poll on resume. The trigger lambda
-        // in the Koin module exposes the encrypted key as a StateFlow via
-        // UserPreferences.geminiApiKey.
+        // Reactive: any Gemini-key change in Settings updates isConfigured immediately, so the
+        // screen doesn't need to poll on resume (exposed as a StateFlow via UserPreferences.geminiApiKey).
         viewModelScope.launch {
-            // Ensure the cached secret has been hydrated before the flow starts emitting
-            // - without this the flow's initial null could briefly show "not configured"
-            // even for users who already have a key saved.
+            // Ensures the cached secret is hydrated before the flow emits - otherwise the initial null
+            // could briefly show "not configured" even for a user who already saved a key.
             userPreferences.getGeminiApiKey()
             userPreferences.geminiApiKey
                 .map { !it.isNullOrBlank() }
@@ -102,9 +99,8 @@ class AgentViewModel(
     }
 
     /**
-     * Wipes the transcript. [sendCounter] is bumped so an in-flight send's completion is
-     * discarded instead of appending an orphan reply to the cleared list, and isSending is
-     * reset so the input re-enables immediately rather than waiting on that dead request.
+     * Wipes the transcript. Bumps [sendCounter] so an in-flight send's completion is discarded
+     * instead of appending an orphan reply, and resets isSending so the input re-enables immediately.
      */
     fun clearChat() {
         sendCounter++

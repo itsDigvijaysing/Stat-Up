@@ -9,42 +9,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * Gemini Generative Language API client.
- *
- * Endpoint: POST `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key=API_KEY`
- *
- * Model: `gemini-3.5-flash-lite` (since 2026-08-21).
- *
- * Chosen on measurement, not on the name Google's deprecation 404 happens to suggest.
- * Same prompt, same day: `gemini-3.6-flash` took 4.2s and spent 409 thinking tokens and
- * rate-limited at 5 req/min; `gemini-3.5-flash-lite` took 1.1s, spent ZERO thinking tokens,
- * and took 8 rapid requests without a 429. For a terse coaching reply the lite model is
- * strictly better: 4x faster, no thinking tokens eating maxOutputTokens, higher free quota.
- *
- * `gemini-2.5-flash` is CLOSED TO NEW USERS - it returns
- * `404 "no longer available to new users"` for any API key whose project had not already
- * used it. An existing project keeps working, which makes this trap easy to miss: testing
- * with a grandfathered developer key shows 200 while every real user gets 404. This app is
- * bring-your-own-key, so ALWAYS validate a model with a fresh key/project, never the .env one.
- *
- * When changing MODEL, re-test the whole payload, not just the name - `generationConfig`
- * is not portable across generations. Gemini 3.x rejects the 2.x `thinkingBudget` with
- * 400 INVALID_ARGUMENT and uses `thinkingLevel` instead.
- *
- * Free-tier quota is generous on lite, but rapid-fire sends
- * can legitimately 429 - that is quota, not a bad key, and is deliberately not retried.
- * A transient `503 UNAVAILABLE` is capacity; the shared client's HttpRequestRetry absorbs it.
- * Verify with scripts/verify_gemini_key.sh. See: https://ai.google.dev/gemini-api/docs/models
- *
- * Request shape (simplified):
- * ```
- * { "system_instruction": { "parts": [{ "text": "..." }] },
- *   "contents": [{ "role": "user"|"model", "parts": [{ "text": "..." }] }, ...],
- *   "generationConfig": { "temperature": 0.7, "maxOutputTokens": 1024,
- *     "thinkingConfig": { "thinkingLevel": "low" } } }
- * ```
- *
- * Response shape: `candidates[0].content.parts[0].text` (or `finishReason=SAFETY` if blocked).
+ * Gemini client. Model pinned to `gemini-3.5-flash-lite` - `gemini-2.5-flash` 404s for any
+ * fresh API key (closed to new users) even though a grandfathered dev key still works.
  */
 class GeminiAgentApi(
     private val httpClient: HttpClient,
@@ -55,11 +21,8 @@ class GeminiAgentApi(
         private const val MODEL = "gemini-3.5-flash-lite"
         private const val BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
-        // STOP = normal completion; MAX_TOKENS = hit our maxOutputTokens cap but the
-        // partial reply is still valid (don't error). Everything else in Gemini's v1beta
-        // finish-reason taxonomy (SAFETY, RECITATION, BLOCKLIST, PROHIBITED_CONTENT,
-        // SPII, OTHER, MALFORMED_FUNCTION_CALL …) means the response was blocked or
-        // scrubbed - surface as AgentSafetyException.
+        // STOP/MAX_TOKENS are benign; every other Gemini finish reason means the response
+        // was blocked or scrubbed - surface as AgentSafetyException.
         private val BENIGN_FINISH_REASONS = setOf("STOP", "MAX_TOKENS")
     }
 
@@ -88,11 +51,8 @@ class GeminiAgentApi(
                     },
                 generationConfig = GeminiGenerationConfig(
                     temperature = 0.7,
-                    // flash-lite reports 0 thinking tokens with or without this, but pin it
-                    // anyway so a future change to the model's default can't silently reintroduce
-                    // dynamic thinking - which draws from the SAME maxOutputTokens cap and, on
-                    // 3.6-flash, ate 488 of 512 and truncated the reply at MAX_TOKENS.
-                    // Gemini 3 rejects the 2.x thinkingBudget with 400 INVALID_ARGUMENT.
+                    // Pin thinkingLevel explicitly - dynamic thinking draws from the same
+                    // maxOutputTokens cap and has previously truncated replies at MAX_TOKENS.
                     thinkingConfig = GeminiThinkingConfig(thinkingLevel = "low"),
                     // 1024 leaves headroom if a model variant ever does spend thinking tokens.
                     maxOutputTokens = 1024
@@ -114,9 +74,8 @@ class GeminiAgentApi(
                     throw AgentAuthException("Gemini rejected the API key (HTTP ${response.status.value}).")
                 response.status == HttpStatusCode.TooManyRequests ->
                     throw AgentRateLimitException("Gemini rate limit reached. Wait a minute and try again.")
-                // 5xx (overloaded / temporary outage) - surface as rate-limit so the UI
-                // shows the same friendly "try again later" copy and the user isn't
-                // confronted with a raw HTTP code.
+                // 5xx is a temporary outage - surface as rate-limit so the UI shows a
+                // friendly "try again later" instead of a raw HTTP code.
                 response.status.value in 500..599 ->
                     throw AgentRateLimitException("Gemini is temporarily unavailable (HTTP ${response.status.value}). Try again shortly.")
             }
@@ -129,9 +88,6 @@ class GeminiAgentApi(
             val candidate = parsed.candidates.firstOrNull()
                 ?: throw Exception("Gemini returned no candidates.")
 
-            // Any non-STOP / non-MAX_TOKENS finish reason from Gemini's v1beta safety
-            // taxonomy means the response was blocked or scrubbed. MAX_TOKENS is benign
-            // (just a truncated reply) and should fall through to the normal text path.
             val finish = candidate.finishReason
             if (finish != null && finish !in BENIGN_FINISH_REASONS) {
                 throw AgentSafetyException("Gemini blocked the response ($finish).")

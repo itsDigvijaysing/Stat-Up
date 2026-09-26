@@ -495,10 +495,8 @@ private fun MoodCheckInDialog(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Two plain Rows, not a LazyVerticalGrid pinned to 160.dp. Two rows need
-                    // ~162dp (56dp button + 4dp + label), so the bottom row's labels were
-                    // clipped - and a larger system font scale clipped more. Rows wrap to
-                    // their content, so this holds at any font size or screen height.
+                    // Plain Rows, not a LazyVerticalGrid pinned to 160.dp - that height clipped
+                    // labels at larger font scales; Rows wrap to content at any size.
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         moods.chunked(3).forEach { row ->
                             Row(

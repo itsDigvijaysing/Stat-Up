@@ -53,9 +53,8 @@ fun GlassCard(
         modifier = modifier
             .scale(scale)
             .clip(shape)
-            // Real backdrop blur via Haze (when LocalHazeState is provided + API 31+).
-            // Replaces the previous static gradient fill. On older devices Haze auto-falls-back
-            // to a translucent scrim, so the card stays readable.
+            // Real backdrop blur via Haze (LocalHazeState + API 31+); older devices auto-fall
+            // back to a translucent scrim so the card stays readable.
             .hazeEffectOrFallback(elevated = elevated)
             // A subtle tint sits on top of the blur - keeps brand color visible without losing readability.
             .background(

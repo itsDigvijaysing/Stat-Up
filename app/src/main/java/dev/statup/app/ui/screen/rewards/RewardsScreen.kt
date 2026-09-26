@@ -60,14 +60,11 @@ fun RewardsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                // No bottom padding: the Scaffold already reserves the bar's height, and
-                // padding on top of that leaves a bare strip between the last card and the
-                // bar's bright top edge, which reads as a drawn black line. Letting the list
-                // run to the bar also gives the glass bar something to actually blur.
+                // No bottom padding: the Scaffold already reserves the bar's height, and extra padding
+                // here would leave a bare strip that reads as a drawn black line above the bar.
                 .padding(start = 16.dp, end = 16.dp, top = 16.dp)
-                // Matches the achievement celebration exactly: the CONTENT blurs, not the
-                // overlay. Haze cannot do this here because the overlay is nested inside the
-                // haze source, which is why this sheet stayed sharp while the celebration did not.
+                // Content blurs, not the overlay (same pattern as the achievement celebration) - Haze
+                // can't blur an overlay nested inside its own source.
                 .blur(if (confirmShowing) GlassTokens.ModalBackdropBlur else 0.dp)
         ) {
             // Header
@@ -144,9 +141,7 @@ fun RewardsScreen(
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    // No bottom padding: the Scaffold already reserves the bar's height, so any
-                    // padding on top of it leaves a strip of bare background between the last
-                    // card and the bar's bright top edge - which reads as a drawn black line.
+                    // Same reasoning as the Column's top-level padding above - no gap before the bar.
                     contentPadding = PaddingValues(bottom = 0.dp)
                 ) {
                     items(uiState.rewards, key = { it.id }) { reward ->
@@ -344,9 +339,8 @@ private fun RewardCard(
                     primary = canAfford
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                // 48dp touch targets (Core App Quality Touch_Target_Size / Material a11y
-                // minimum). The glyphs stay small so the card's visual weight is unchanged -
-                // only the tappable area grows. Do NOT shrink these back with Modifier.size().
+                // 48dp touch targets (Core App Quality Touch_Target_Size). Glyphs stay small - only
+                // the tappable area grows. Do NOT shrink these back to match the glyph.
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = onEdit,
@@ -385,10 +379,8 @@ private fun ConfirmActionDialog(
     onDismiss: () -> Unit,
     titleColor: Color = TextPrimary
 ) {
-    // An in-tree overlay, NOT a Dialog. A Dialog is its own window, so Haze cannot sample the
-    // app behind it and the backdrop can only be darkened, never blurred. Rendered here it
-    // sits inside the NavHost - the haze source - so the rewards behind genuinely blur, the
-    // same way GlassCard already does.
+    // In-tree overlay, not a Dialog - a Dialog is its own window, so Haze couldn't sample it and
+    // could only darken, never blur, the backdrop. Rendered here it sits inside the NavHost haze source.
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -405,9 +397,8 @@ private fun ConfirmActionDialog(
                 .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            // Deliberately NOT a GlassCard: glass is translucent, so over a real screen the
-            // list behind bleeds straight through the card and collides with its own text.
-            // A confirmation has to be solid to be readable.
+            // Deliberately not a GlassCard: translucent glass would let the list behind bleed
+            // through and collide with the text - a confirmation needs to read as solid.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -478,9 +469,8 @@ private fun CreateRewardDialog(
     // Effective cost: custom field overrides preset when filled with a positive int.
     val effectiveCost = customCost.toIntOrNull()?.takeIf { it > 0 } ?: cost.toIntOrNull() ?: 10
 
-    // Stays a plain Dialog. Only the achievement celebration and the redeem confirmation
-    // blur their backdrop; this is an ordinary form and should behave like every other
-    // dialog in the app.
+    // Plain Dialog on purpose - only the achievement celebration and redeem confirmation blur
+    // their backdrop; this is an ordinary form and should behave like every other dialog.
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)

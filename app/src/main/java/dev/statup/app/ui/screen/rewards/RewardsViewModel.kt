@@ -19,9 +19,8 @@ class RewardsViewModel(
     private val _uiState = MutableStateFlow(RewardsUiState())
     val uiState: StateFlow<RewardsUiState> = _uiState.asStateFlow()
 
-    // Monotonic id per redemption so the screen's LaunchedEffect re-fires even when the
-    // SAME reward is redeemed twice inside the snackbar's display window (the reward name
-    // alone is an unchanged key in that case, which would freeze the auto-dismiss timer).
+    // Monotonic id so the screen's LaunchedEffect re-fires even when the SAME reward is
+    // redeemed twice inside the snackbar's window (the name alone would be an unchanged key).
     private var redeemEventId = 0L
 
     init {
@@ -86,9 +85,8 @@ class RewardsViewModel(
                     it.copy(redeemSuccess = RedeemSuccess(++redeemEventId, reward.name))
                 }
             }.onFailure { error ->
-                // Name the shortfall rather than restating both numbers. This is also the message
-                // the guided tour's last step surfaces if the balance is somehow short, so it has to
-                // tell the user what to do rather than just that something failed.
+                // Name the shortfall rather than restating both numbers - this is also the message
+                // the guided tour's last step surfaces, so it must say what to do, not just that it failed.
                 val message = when (error) {
                     is dev.statup.app.data.repository.InsufficientPointsException ->
                         "You need ${error.required - error.available} more points for this."

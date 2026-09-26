@@ -45,10 +45,8 @@ class TodoistApi(private val httpClient: HttpClient) {
     }
 
     /**
-     * Fetch completed tasks via Todoist Sync v1 API.
      * `annotate_items=true` returns each entry with an `item_object` containing priority & labels.
-     * Returns newest first. The response is parsed manually because Todoist sometimes nests results
-     * differently on edge cases; we accept any object with an `items` array.
+     * Parsed manually (not a fixed data class) because Todoist sometimes nests results differently.
      */
     suspend fun getCompletedTasks(token: String, limit: Int = 30): Result<List<CompletedTask>> {
         return try {
@@ -77,8 +75,7 @@ class TodoistApi(private val httpClient: HttpClient) {
                 try {
                     val obj = element.jsonObject
                     // contentOrNull, not content: JsonNull.content is the STRING "null", which
-                    // survives the isBlank guard below and would claim the unique externalId
-                    // index - silently dropping every later null-id task.
+                    // would claim the unique externalId index and silently drop later null-id tasks.
                     val id = obj["id"]?.jsonPrimitive?.contentOrNull ?: ""
                     val taskId = obj["task_id"]?.jsonPrimitive?.contentOrNull ?: ""
                     val content = obj["content"]?.jsonPrimitive?.contentOrNull ?: ""

@@ -8,27 +8,10 @@ import kotlin.math.exp
 import kotlin.math.sqrt
 
 /**
- * Multinomial logistic regression over hashed character n-grams plus word uni/bigrams - the
- * fastText shape, trained by `scripts/train_stat_classifier.py` and shipped as a 96 KB int8
- * blob in `assets/classifier/`.
- *
- * Takes [modelBytes] rather than a `Context` (the narrow-port style of `DecayEngine`) so the
- * scoring path is JVM-testable with no Android dependency. The blob is parsed on first use and
- * held for the process lifetime; scoring is sub-millisecond.
- *
- * **Feature extraction must match the trainer byte for byte** or every score is garbage.
- * `HashedLinearTaskClassifierTest` pins it against probabilities computed in Python. The
- * non-obvious parts, each verified against `featurise()`:
- *  - weights ACCUMULATE (`+=`); a repeated word or an n-gram collision adds up, so this can
- *    never be a set-of-hashes implementation
- *  - char n-grams are taken inside each space-padded word only, never across word boundaries,
- *    and a word shorter than `n - 2` simply contributes nothing at that `n`
- *  - [String.lowercase] is called without a locale on purpose: the locale-sensitive overload
- *    maps `I` to `ı` under a Turkish locale, which would corrupt every score on those devices
- *  - Python's `str.split()` also splits on non-breaking space, which Java's `\s` does not
- *  - CRC32 is unsigned; `CRC32.getValue()` returns a `Long`, and taking the modulus there
- *    avoids the negative bucket a naive `Int` modulus would produce
- *  - the bias vector is stored un-quantised - it is added raw, never multiplied by the scale
+ * Feature extraction must exactly match `scripts/train_stat_classifier.py` or every score is
+ * garbage (pinned by `HashedLinearTaskClassifierTest`). Non-obvious traps: `lowercase()` has no
+ * Locale (avoids the Turkish `I`->`ı` mapping), CRC32's `Long` value is modulused before the
+ * `Int` cast (avoids a negative bucket), and weights accumulate via `+=`, never overwrite.
  */
 class HashedLinearTaskClassifier(
     private val modelBytes: () -> ByteArray,
@@ -62,21 +45,14 @@ class HashedLinearTaskClassifier(
         text.lowercase().split(*WHITESPACE).filter { it.isNotEmpty() }
 
     /**
-     * Builds the hashed feature vector, then hands back only the buckets that were actually
-     * touched. A few words touch a few hundred of the 16384 buckets, so everything downstream
-     * works off that sparse view.
-     *
-     * The L2 norm is deliberately NOT applied to the vector here. Scoring is linear, so
-     * dividing the accumulated dot product by the norm once per class is exactly equivalent to
-     * dividing all 16384 components first - and skips a whole pass over the array.
+     * Hands back only the touched buckets (a few hundred of 16384), not the full dense vector.
+     * L2 normalisation is deferred to scoring - dividing the dot product once per class is
+     * equivalent and skips a full pass over the array.
      */
     private fun featurise(tokens: List<String>, buckets: Int): Features {
         val dense = FloatArray(buckets)
-        // Touched buckets are recorded as they are first written, rather than found afterwards by
-        // scanning all 16384 slots. A few words touch a few hundred of them, so the scan was ~98% of
-        // the work in this function. The arrays stay per-call on purpose: this class is a Koin
-        // singleton and the two stat pickers, the Todoist sync worker and the category backfill can
-        // all score concurrently, so shared scratch buffers would corrupt scores non-deterministically.
+        // Per-call scratch arrays, not shared: this classifier is a Koin singleton scored concurrently
+        // by both stat pickers, Todoist sync, and category backfill - shared buffers would corrupt scores.
         val indices = IntArray(buckets)
         var count = 0
         fun bump(bucket: Int, by: Float) {
@@ -86,10 +62,8 @@ class HashedLinearTaskClassifier(
 
         for (token in tokens) {
             val padded = " $token "
-            // CRC32 wants bytes. Converting the padded word once and hashing byte ranges avoids
-            // a substring + a ByteArray per n-gram (~240 short-lived objects per call). Only
-            // valid while one char maps to one byte, so non-ASCII falls back to the slow path:
-            // Python slices by CHARACTER before encoding, and byte offsets would not match.
+            // Byte-range hashing needs one char == one byte, so non-ASCII falls back to the slow
+            // substring path - Python slices n-grams by character, and byte offsets wouldn't match.
             val asciiBytes = padded.asciiBytesOrNull()
             for (n in NGRAM_MIN..NGRAM_MAX) {
                 for (i in 0..padded.length - n) {

@@ -37,13 +37,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Renders the bundled privacy policy.
- *
- * Google Play's User Data policy requires the policy to be reachable from within the app, not
- * only from the store listing. Reading it from `assets/privacy_policy.md` (generated from the
- * repo-root PRIVACY_POLICY.md by the `syncPrivacyPolicy` Gradle task) keeps that reachable
- * with zero network access, which matters for an offline-first app: no browser hand-off, no
- * INTERNET dependency, and the text can never 404 or drift from the shipped build.
+ * Reads from `assets/privacy_policy.md` (synced from repo-root PRIVACY_POLICY.md by
+ * `syncPrivacyPolicy`) - Play requires the policy reachable in-app, not just the store listing.
  */
 @Composable
 fun PrivacyPolicyScreen(navController: NavController) {

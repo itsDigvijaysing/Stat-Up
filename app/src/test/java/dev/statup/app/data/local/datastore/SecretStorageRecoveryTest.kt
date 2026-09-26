@@ -7,18 +7,8 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 /**
- * Tests the recovery control-flow used to survive an undecryptable EncryptedSharedPreferences
- * file after a device restore (the AndroidKeyStore master key isn't backed up). The Android
- * glue (EncryptedSharedPreferences) can't run on the JVM, but the retry/wipe logic is the
- * part with the bugs, and it is pure.
- *
- * Semantics under test:
- *  1. First open fails → retry once WITHOUT wiping. The Android Keystore is known to fail
- *     transiently (right after boot, device momentarily locked); a one-off flake must not
- *     destroy the user's stored tokens.
- *  2. Retry also fails → the file is treated as genuinely undecryptable: wipe once, then
- *     open again.
- *  3. Post-wipe open fails too → propagate (genuinely unrecoverable).
+ * Tests the pure retry/wipe control-flow for a corrupt EncryptedSharedPreferences file: retry
+ * once without wiping (transient Keystore flakes), then wipe once if it's still undecryptable.
  */
 class SecretStorageRecoveryTest {
 

@@ -17,10 +17,7 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The one-time upgrade sequences backfill → recompute behind a version gate. Every user's
- * stats pass through this exactly once, so the gate and the ordering are worth pinning.
- */
+/** The one-time upgrade sequences backfill → recompute behind a version gate, run exactly once. */
 class StatUpgradeRunnerTest {
 
     @Test

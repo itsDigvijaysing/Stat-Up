@@ -18,18 +18,8 @@ interface UncategorisedEarnStore {
 }
 
 /**
- * Assigns a stat to completed tasks that never got one - the case where points landed in the
- * balance but grew no stat at all.
- *
- * Only ever touches rows whose `statType IS NULL`; a category the user picked, or one a Todoist
- * label routed, is never overwritten. The UPDATE re-checks the NULL in SQL, so a concurrent
- * categorisation wins over this pass rather than being clobbered.
- *
- * Runs once automatically before the one-time stat recompute, and is re-runnable by hand from
- * Settings afterwards. The automatic first pass is followed by a full rebuild, so the
- * accumulator credit here only matters for those later manual runs - which is exactly why it
- * is applied incrementally instead of re-deriving every stat (a re-derivation would silently
- * undo every stat point the user has since lost to decay).
+ * Assigns a stat to completed tasks that never got one. Applies incrementally rather than
+ * re-deriving, since re-derivation would undo stat points already lost to decay.
  */
 class CategoryBackfill(
     private val earnStore: UncategorisedEarnStore,
@@ -38,15 +28,8 @@ class CategoryBackfill(
     private val transactor: Transactor
 ) {
     /**
-     * Runs on [Dispatchers.Default], not the caller's thread. `classify` is a plain blocking CPU call
-     * and the first one also reads the 96 KB model off disk; the Settings entry point calls this from
-     * `viewModelScope` (`Main.immediate`), so without this every row's scoring ran on the UI thread.
-     *
-     * Rows are processed in [CHUNK_SIZE] batches, each batch assigning its rows **and** crediting its
-     * stats in one transaction. Previously every row was assigned first and all the credit applied at
-     * the end, so a crash mid-run left rows categorised with no stats to show for it. Batching also
-     * collapses the transaction count by [CHUNK_SIZE] and means progress fires per chunk instead of
-     * per row - the per-row version triggered a recomposition for every single transaction.
+     * Runs on [Dispatchers.Default] since `classify` blocks; each [CHUNK_SIZE] batch assigns rows
+     * and credits stats in one transaction so a mid-run crash can't strand categorised-but-uncredited rows.
      */
     suspend fun run(
         onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }
@@ -92,11 +75,7 @@ class CategoryBackfill(
         statsStore.updateStats(updated.copy(updatedAt = System.currentTimeMillis()))
     }
 
-    /**
-     * Todoist earns are stored as "Todoist: <task title>". The prefix is app plumbing, not part
-     * of the task, and every such row would otherwise share it - feeding the model a constant
-     * token that carries no signal.
-     */
+    /** Strips the "Todoist: " plumbing prefix, which is a constant token with no classifier signal. */
     private fun stripSourcePrefix(description: String): String =
         description.removePrefix("Todoist: ").trim()
 

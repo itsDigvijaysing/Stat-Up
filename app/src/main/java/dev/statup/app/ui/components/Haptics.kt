@@ -10,9 +10,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 val LocalHapticsEnabled = staticCompositionLocalOf { true }
 
 /**
- * Returns a callback that performs a short haptic tick when haptics are enabled, and is a no-op
- * when the user has turned the Settings toggle off. Use to confirm high-signal actions (redeem,
- * mission complete, mood check-in, shield buy, rank-up). Uses the platform haptic feedback, so
+ * A haptic tick, no-op when the Settings toggle is off. Uses the platform haptic feedback API, so
  * it needs no VIBRATE permission and respects the system's touch-feedback setting.
  */
 @Composable

@@ -5,11 +5,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Who counts as a brand-new user.
- *
- * The defect this guards: `tutorial_complete` and `starter_content_seeded` both default to false,
- * which is indistinguishable from "an install that predates them". Left unresolved, every updating
- * user was treated as new - 13 sample items appeared in their lists and the tutorial tried to start.
+ * Guards against the defect where `tutorial_complete`/`starter_content_seeded` both default to
+ * false, indistinguishable from "predates them" - every updating user looked new.
  */
 class FirstRunPolicyTest {
 

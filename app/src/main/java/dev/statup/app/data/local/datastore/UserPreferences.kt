@@ -18,12 +18,8 @@ import kotlinx.coroutines.flow.map
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
 /**
- * App preferences. Plain values live in DataStore; secrets (API tokens) are routed
- * through [SecretStorage] (AES-256-GCM encrypted). The first read of a secret
- * migrates any legacy plain-text value out of DataStore and into encrypted storage.
- *
- * Implements [DailyQuoteStore] - the narrow slice QuoteRepository needs (source setting +
- * day-keyed quote cache) - so the repository stays unit-testable without a Context.
+ * Plain values live in DataStore; secrets route through [SecretStorage] (AES-256-GCM),
+ * migrating any legacy plaintext value out of DataStore on first read.
  */
 class UserPreferences(private val context: Context) :
     DailyQuoteStore,
@@ -49,31 +45,26 @@ class UserPreferences(private val context: Context) :
         val LAST_SYNC_TIME = longPreferencesKey("last_sync_time")
         val SHOW_DECAY_ANIMATIONS = booleanPreferencesKey("show_decay_animations")
         val HAPTIC_FEEDBACK = booleanPreferencesKey("haptic_feedback")
-        // Master switch for the on-device stat classifier. Off means the model is never asked
-        // for a guess anywhere - and since the 96 KB blob loads lazily on first use, it is
-        // never even read off disk.
+        // Off means the classifier is never consulted, and the 96 KB blob is never read off disk.
         val AUTO_CATEGORISE = booleanPreferencesKey("auto_categorise")
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
         // Guided tutorial that runs once after onboarding, before the main shell unlocks.
         val TUTORIAL_COMPLETE = booleanPreferencesKey("tutorial_complete")
-        // Which tutorial step the user is on. Persisted because the tour spans several real
-        // screens and can easily outlive the process - without this, a restart mid-tour
-        // replays the intro and asks for work the user has already done.
+        // Persisted because the tour spans several screens and can outlive the process -
+        // without this a restart mid-tour replays the intro.
         val TUTORIAL_STEP = stringPreferencesKey("tutorial_step")
         // Starter missions/rewards are seeded once and never again - deleting the samples
         // must be permanent, so this is a flag rather than an "is the table empty" check.
         val STARTER_CONTENT_SEEDED = booleanPreferencesKey("starter_content_seeded")
-        // Set once the "is this a brand-new install?" question has been answered and the flags
-        // above written accordingly. The UI waits on this, so first-run state is never read while
-        // it is still being decided - see resolveFirstRunFlags.
+        // Set once the first-run question is decided; the UI waits on this so first-run state
+        // is never read mid-decision - see resolveFirstRunFlags.
         val FIRST_RUN_RESOLVED = booleanPreferencesKey("first_run_resolved")
         // Version of the stat curve the stored stats were built with. Bumping the constant
         // triggers exactly one rebuild of every stat from lifetime points.
         val STAT_CURVE_VERSION = intPreferencesKey("stat_curve_version")
         val HEXAGON_STYLE = stringPreferencesKey("hexagon_style")
-        // Local-date string (yyyy-MM-dd) of the most recent successful DecayEngine run.
-        // Guards against double-application when WorkManager retries, runNow() fires,
-        // or scheduling overlaps the next tick.
+        // Local-date (yyyy-MM-dd) of the most recent DecayEngine run; guards against
+        // double-applying decay on WorkManager retry or overlapping schedules.
         val LAST_DECAY_DAY = stringPreferencesKey("last_decay_day")
         val LAST_MISSION_RESET_DAY = stringPreferencesKey("last_mission_reset_day")
         // Achievement title the user chose to display under their name on the status
@@ -102,9 +93,7 @@ class UserPreferences(private val context: Context) :
     val equippedTitleId: Flow<String?> = context.dataStore.data.map { it[Keys.EQUIPPED_TITLE_ID] }
 
     // ---- Secrets (encrypted) ----
-    // These StateFlows start as null. [loadSecretsIfNeeded] (called from StatUpApp init)
-    // populates them with values from EncryptedSharedPreferences. Suspend callers should
-    // prefer [getTodoistToken] / [getGeminiApiKey], which guarantee the load has completed.
+    // Start null; loadSecretsIfNeeded() populates them - prefer getTodoistToken()/getGeminiApiKey().
 
     val todoistToken: Flow<String?> = todoistTokenFlow.asStateFlow()
     val geminiApiKey: Flow<String?> = geminiApiKeyFlow.asStateFlow()
@@ -133,16 +122,8 @@ class UserPreferences(private val context: Context) :
     }
 
     /**
-     * Moves a plaintext secret out of DataStore and into encrypted storage.
-     *
-     * Order matters and so does durability: write encrypted, confirm it can be read back, and only
-     * then delete the plaintext. The previous version deleted first, so a failure in between
-     * destroyed the token outright - and a plain `apply()` write would not even have reported one.
-     * The realistic failure is a Keystore flake, which is not hypothetical here:
-     * `SecretStorage.openWithRecovery` exists precisely because those happen right after boot, which
-     * is exactly when `loadSecretsIfNeeded()` runs.
-     *
-     * On any failure the plaintext is left in place and returned, so the next launch retries.
+     * Writes to encrypted storage and verifies the read-back BEFORE deleting the plaintext -
+     * deleting first (the old order) could destroy the token if the write silently failed.
      */
     private suspend fun migrateLegacySecret(legacyKey: Preferences.Key<String>, secretKey: String): String? {
         val legacy = context.dataStore.data.first()[legacyKey]
@@ -218,22 +199,8 @@ class UserPreferences(private val context: Context) :
         context.dataStore.data.map { it[Keys.FIRST_RUN_RESOLVED] ?: false }
 
     /**
-     * Decides once, per install, whether this is a brand-new user, and writes the first-run flags to
-     * match. Runs before anything reads them.
-     *
-     * `tutorial_complete` and `starter_content_seeded` both default to `false`, which is
-     * indistinguishable from "an install that predates them". Left alone, every updating user is
-     * treated as new: 13 sample items appear in their lists and the tutorial tries to start. Worse,
-     * the flags were written asynchronously from two different places while the UI was already
-     * reading them, so the outcome came down to which coroutine won.
-     *
-     * [isFreshInstall] comes from `firstInstallTime == lastUpdateTime`. The `onboardingComplete`
-     * term covers the one case that gets wrong: someone who installs, never opens the app, then
-     * updates and opens it for the first time has diverging timestamps but is genuinely new, and
-     * would otherwise be denied the tutorial.
-     *
-     * Deciding is separate from [markFirstRunResolved] so the caller can seed the starter content in
-     * between - the gate opens only once there is something to show.
+     * Decides once per install whether the user is new, combining isFreshInstall with
+     * onboardingComplete to also catch never-opened installs that update before first launch.
      */
     suspend fun resolveFirstRunFlags(isFreshInstall: Boolean) {
         context.dataStore.edit { prefs ->
@@ -251,13 +218,8 @@ class UserPreferences(private val context: Context) :
     }
 
     /**
-     * Post-reset first-run state, written in one edit.
-     *
-     * A full reset clears every key, including the gate - and it happens in the same process, long
-     * after [resolveFirstRunFlags] ran at startup. Without this the UI would sit behind the gate on a
-     * blank frame until the user force-quit. Someone who deliberately wipes their data knows the app,
-     * so the tour is marked done rather than replayed, and the stat curve is stamped because there is
-     * no history left to rebuild from.
+     * Re-writes first-run state after a full reset (which clears the gate too) - without this
+     * the UI would sit blocked on a blank frame until force-quit.
      */
     suspend fun markResetComplete(statCurveVersion: Int) {
         context.dataStore.edit {

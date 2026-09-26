@@ -3,12 +3,8 @@ package dev.statup.app.domain.model
 import kotlinx.serialization.Serializable
 
 /**
- * A single daily quote. [author] is the character name for anime quotes, the person for
- * motivational ones. [origin] is the anime/show title (null for motivational quotes).
- * [attribution] names the online provider when one was used (e.g. "ZenQuotes.io") - when
- * present it MUST be rendered visibly; ZenQuotes' free tier requires it.
- *
- * Serializable because the day's quote is cached as JSON in DataStore.
+ * [attribution] names the online provider (e.g. "ZenQuotes.io"); when present it MUST be
+ * rendered visibly - ZenQuotes' free tier requires it.
  */
 @Serializable
 data class Quote(
@@ -19,9 +15,8 @@ data class Quote(
 )
 
 /**
- * Where the daily quote comes from. OFFLINE (default) keeps the app's offline-first /
- * no-network-without-opt-in stance - the online sources are an explicit Settings choice.
- * MIXED alternates anime/motivation by day.
+ * OFFLINE (default) keeps the app's offline-first stance - online sources are an explicit
+ * opt-in. MIXED alternates anime/motivation by day.
  */
 enum class QuoteSource(val label: String) {
     OFFLINE("Offline pack"),

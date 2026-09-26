@@ -25,11 +25,8 @@ interface MissionDao {
     suspend fun update(mission: MissionEntity)
 
     /**
-     * Completes a mission only if it is not already complete, returning the number of rows changed.
-     *
-     * The condition is the double-tap guard: a read-then-write cannot provide one, because
-     * `getById` suspends and a second tap interleaves at that suspension point, so both callers see
-     * `isCompletedToday = false` and both award points. Let SQLite decide the winner instead.
+     * Completes a mission only if not already complete - the SQL WHERE clause is the double-tap
+     * guard; a read-then-write can't provide one since `getById` suspends between the two.
      */
     @Query(
         "UPDATE missions SET isCompletedToday = 1, lastCompletedAt = :completedAt, " +
@@ -38,11 +35,8 @@ interface MissionDao {
     suspend fun completeIfNotDone(id: Long, completedAt: Long = System.currentTimeMillis()): Int
 
     /**
-     * Clears the daily completions. **`isDaily = 1` is load-bearing.**
-     *
-     * Without it this also un-completed one-off missions - the ones created with the "Repeats Daily"
-     * switch off - so a declared one-off came back every midnight and could be re-awarded
-     * indefinitely. That needed no race and no crash; it was simply wrong every night.
+     * Clears daily completions. **`isDaily = 1` is load-bearing** - without it, one-off
+     * missions would also reset and could be re-awarded every midnight.
      */
     @Query("UPDATE missions SET isCompletedToday = 0 WHERE isDaily = 1")
     suspend fun resetDailyCompletions()

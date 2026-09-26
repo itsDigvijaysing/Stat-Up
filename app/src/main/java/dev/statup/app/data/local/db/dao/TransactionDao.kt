@@ -27,14 +27,8 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE externalId = :externalId LIMIT 1")
     suspend fun getByExternalId(externalId: String): TransactionEntity?
 
-    /**
-     * Every local date on which at least one point was earned, ascending (yyyy-MM-dd).
-     *
-     * This is the true history behind the Work Day counter. The pre-v4 column reset to 0 on
-     * every promotion so it only ever held 0..5 and carries no usable history - the one-time
-     * upgrade replays the new model over these dates instead. `localtime` matches how
-     * DecayEngine decides an active day.
-     */
+    /** Every local date with at least one earn, ascending - the real history the one-time Work
+     * Day recompute replays, since the pre-v4 column reset on every promotion and is unusable. */
     @Query(
         "SELECT DISTINCT date(createdAt / 1000, 'unixepoch', 'localtime') AS day " +
             "FROM transactions WHERE type = 'EARN' ORDER BY day ASC"
@@ -45,13 +39,8 @@ interface TransactionDao {
     @Query("SELECT IFNULL(SUM(points), 0) FROM transactions WHERE type = 'EARN' AND statType = :statType")
     suspend fun getLifetimePointsForStat(statType: String): Int
 
-    /**
-     * Completed earns that never got a stat assigned - the classifier backfill's work list.
-     *
-     * Achievement payouts are excluded: they are an EARN with no stat by design (a payout is not
-     * a task), so leaving them in would mean the backfill's "remaining" count could never reach
-     * zero. The literal must match `ACHIEVEMENT_REWARD_PREFIX`.
-     */
+    /** Completed earns with no stat assigned - the classifier backfill's work list. Excludes
+     * achievement payouts (stat-less by design) or "remaining" could never reach zero. */
     @Query(
         "SELECT * FROM transactions WHERE type = 'EARN' AND statType IS NULL " +
             "AND (description IS NULL OR description NOT LIKE 'Achievement reward: %') " +
@@ -68,21 +57,13 @@ interface TransactionDao {
     )
     fun countUncategorisedEarns(): Flow<Int>
 
-    /**
-     * Whether a specific achievement payout has actually committed.
-     *
-     * The guided tutorial needs this: it tells the user how many points they now have and then asks
-     * them to spend exactly that, so it must not advance on a timer while the payout is still in
-     * flight. Matching the description is how the payout is identified - `ACHIEVEMENT_REWARD_PREFIX`
-     * plus the achievement id, written by the awarder in `AppModule`.
-     */
+    /** Whether a specific achievement payout has committed, matched by its description. Backs
+     * the tutorial's advance check, which must not fire while a payout is still in flight. */
     @Query("SELECT COUNT(*) FROM transactions WHERE type = 'EARN' AND description = :description")
     suspend fun countByDescription(description: String): Int
 
-    /**
-     * How many times a mission has already been paid for. Used to stop a non-daily (one-off)
-     * mission being re-awarded after it was un-completed by the pre-fix nightly reset.
-     */
+    /** How many times a mission has been paid - stops a one-off mission being re-awarded after
+     * the pre-fix nightly reset un-completed it. */
     @Query("SELECT COUNT(*) FROM transactions WHERE source = 'MISSION' AND relatedId = :missionId")
     suspend fun countMissionAwards(missionId: String): Int
 
@@ -104,11 +85,8 @@ interface TransactionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(transaction: TransactionEntity): Long
 
-    /**
-     * Insert variant that returns -1 instead of replacing on a unique-constraint conflict
-     * (i.e. a transaction with the same externalId already exists). Used by Todoist sync
-     * so concurrent runs can't double-award the same completed task.
-     */
+    /** Returns -1 on a unique-constraint conflict instead of replacing, so concurrent Todoist
+     * sync runs can't double-award the same completed task. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIgnore(transaction: TransactionEntity): Long
 

@@ -121,9 +121,8 @@ fun AppNavigation(
         userPreferences.tutorialComplete.collect { value = it }
     }
 
-    // Nothing may act on a first-run flag until this is true: both flags default to false, which
-    // looks identical to "an install that predates them", so reading them early is what let an
-    // updating user be mistaken for a new one. StatUpApp resolves them, seeds, then opens this.
+    // Both flags default to false, indistinguishable from "predates them" - wait for this
+    // before acting or an updating user is mistaken for a new one.
     val firstRunResolved by produceState<Boolean?>(initialValue = null, userPreferences) {
         userPreferences.firstRunResolved.collect { value = it }
     }
@@ -181,8 +180,8 @@ fun AppNavigation(
 }
 
 /**
- * Blocking progress screen for the one-time upgrade. Covers the whole app because the stats
- * underneath are mid-rewrite; it is dismissed by the runner reaching [StatUpgradeState.Done].
+ * Blocking progress screen for the one-time upgrade; dismissed once the runner reaches
+ * [StatUpgradeState.Done].
  */
 @Composable
 private fun StatUpgradeOverlay(state: StatUpgradeState) {
@@ -190,10 +189,8 @@ private fun StatUpgradeOverlay(state: StatUpgradeState) {
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundBase.copy(alpha = 0.97f))
-            // Swallows taps. A Box with only a background does not consume pointer events, so
-            // without this the app underneath stayed fully operable while its stats were mid-rewrite
-            // - the opposite of what a blocking progress screen is for. Same idiom as
-            // AchievementUnlockedDialog's scrim.
+            // Swallows taps: a bare background Box doesn't consume pointer events, so without
+            // this the app stayed operable while stats were mid-rewrite.
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -255,24 +252,16 @@ private fun MainShell(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Routes.STATUS
 
-    // Scaffold's bottomBar slot reserves a FIXED height for content padding - it never
-    // accounts for the IME, so when the keyboard opens over AgentScreen's chat input, that
-    // fixed reservation and the keyboard height fight each other (wrong gap either way).
-    // Hiding the bar while the keyboard is visible removes the fixed competitor entirely,
-    // leaving AgentScreen's own imePadding() as the only thing sizing the bottom space.
+    // Scaffold's bottomBar slot reserves a fixed height that never accounts for the IME,
+    // fighting AgentScreen's chat input - hide the bar while the keyboard is visible instead.
     val imeVisible = WindowInsets.isImeVisible
     val showBottomBar = currentRoute in bottomNavRoutes && !imeVisible
 
-// Unlocks are celebrated wherever the user happens to be, so the listener lives at the
-    // shell rather than on any one screen - a Todoist sync or the midnight decay tick can
-    // unlock something with no relevant screen open. It must render INSIDE the
-    // LocalHazeState provider, or hazeEffectOrFallback finds no state and silently skips
-    // the blur, leaving only a dim.
+    // Listener lives at the shell (not a screen) so background unlocks - e.g. a Todoist sync -
+    // are still celebrated; must stay inside the LocalHazeState provider or the blur silently degrades to a dim.
     val unlockNotifier = koinInject<AchievementUnlockNotifier>()
-    // A QUEUE, not a single slot. Unlocks can land together - a first Todoist sync crossing several
-    // task-count thresholds at once, or a rank-up arriving with a points milestone - and the collect
-    // loop drains the channel without suspending between events, so assigning to one slot meant
-    // every celebration but the last was silently swallowed. They are shown one after another.
+    // A QUEUE, not a single slot: unlocks can land together (e.g. a sync crossing several
+    // thresholds at once), and a single slot silently swallowed all but the last.
     val unlockQueue = remember { mutableStateListOf<Achievement>() }
     val pendingUnlock = unlockQueue.firstOrNull()
     LaunchedEffect(unlockNotifier) {
@@ -324,10 +313,8 @@ private fun MainShell(
                 startDestination = Routes.STATUS,
                 modifier = Modifier
                     .padding(paddingValues)
-                    // Without this, descendants that read WindowInsets directly (e.g.
-                    // AgentScreen's imePadding()) don't know paddingValues already reserved
-                    // the bottom-bar's height, so they stack the full inset on top of it -
-                    // a permanent gap the size of the bottom bar between content and the IME.
+                    // Without this, descendants reading WindowInsets directly (e.g. AgentScreen's
+                    // imePadding()) don't know paddingValues already reserved the bar's height, stacking a duplicate gap.
                     .consumeWindowInsets(paddingValues)
                     .hazeSourceOrFallback()
                     // Blur everything behind a modal celebration. Applied to the content, not
@@ -379,38 +366,29 @@ private fun MainShell(
                 achievement = unlocked,
                 onDismiss = {
                     if (unlockQueue.isNotEmpty()) unlockQueue.removeAt(0)
-                    // Dismissing the celebration IS the tutorial's achievement step; it is a no-op
-                    // at every other time. Held until the queue drains so a pile-up of unlocks does
-                    // not advance the tour out from under the ones still waiting to be shown.
+                    // Dismissing the celebration IS the tutorial's achievement step (a no-op otherwise);
+                    // held until the queue drains so a pile-up of unlocks can't skip ahead of ones still waiting.
                     if (unlockQueue.isEmpty()) onTutorialAcknowledge()
                 },
-                // Measured, not guessed: the strip's height depends on how long the step's copy
-                // wraps, so a constant here would silently stop clearing it the next time the
-                // wording changes.
+                // Measured, not guessed: the strip's height depends on how the step's copy wraps, so
+                // a constant would silently stop clearing it once the wording changes.
                 bottomReserved = coachMarkHeight
             )
         }
 
-        // Drawn LAST, after the celebration overlay, so the instructions stay sharp and fully
-        // readable on top of the blur rather than being blurred with the rest of the screen.
-        // (It also has to sit outside the Scaffold: inside its content slot the bottom bar -
-        // a sibling drawn afterwards - painted straight over it.)
+        // Drawn LAST so it stays sharp above the blur, and outside the Scaffold - inside its
+        // content slot the bottom bar (a sibling drawn afterwards) painted straight over it.
         LaunchedEffect(tutorialStep, pendingUnlock) {
             if (tutorialStep == TutorialStep.SEE_ACHIEVEMENT && pendingUnlock == null) {
-                // Give the unlock a moment to arrive; if nothing shows, move on by itself rather
-                // than stranding the tour on a step with no action left in it. No recheck needed
-                // after the delay: pendingUnlock is a val re-derived from unlockQueue, so an
-                // arriving unlock changes this effect's own key and cancels/relaunches it before
-                // we'd get here - reaching this line already means nothing arrived.
+                // Give the unlock a moment to arrive before giving up on the step. No recheck needed
+                // after the delay: an arriving unlock changes this effect's key and cancels/relaunches it first.
                 kotlinx.coroutines.delay(1500)
                 onTutorialAcknowledge()
             }
         }
 
-        // The strip is anchored to the bottom and drawn last, so it used to sit on top of the unlock
-        // popup's dismiss button: the user could see "Nice!" but not tap it, and that tap is what
-        // advances the achievement step, so the tour stuck there. It stays visible - step two is
-        // where the tour explains the 45 points - and the popup reserves room for it instead.
+        // Used to sit on top of the unlock popup's dismiss button (unclickable "Nice!" stranded
+        // the tour there) - now the popup reserves room for this strip instead of covering it.
         tutorialStep?.takeIf { it != TutorialStep.INTRO }?.let { step ->
             TutorialOverlay(
                 step = step,
@@ -436,9 +414,8 @@ private fun MainShell(
 }
 
 /**
- * Asks for POST_NOTIFICATIONS once on Android 13+. Decline is fine - the Notifier re-checks
- * permission before every notify call, so refusal silently disables notifications. No UI shows
- * if the permission isn't needed (API < 33) or is already granted.
+ * Asks for POST_NOTIFICATIONS once on Android 13+; decline is fine since Notifier re-checks
+ * permission before every notify call, silently disabling notifications on refusal.
  */
 @Composable
 private fun RequestNotificationPermissionOnce() {

@@ -11,36 +11,21 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 /**
- * Points paid out by an unlocked achievement are tagged with this prefix. They are an EARN with
- * no stat - a payout, not a task - so the classifier backfill filters them out by it. Change the
- * literal here and in [dev.statup.app.data.local.db.dao.TransactionDao] together, or the backfill
- * will start offering to categorise achievement payouts and its "remaining" count will never
- * reach zero.
+ * Tags achievement payouts so the classifier backfill excludes them. Keep the literal in sync
+ * with [dev.statup.app.data.local.db.dao.TransactionDao].
  */
 const val ACHIEVEMENT_REWARD_PREFIX = "Achievement reward: "
 
 /**
- * Achievement progress, unlocking and payout.
- *
- * **Past payout losses are deliberately not repaired.** Builds before the award moved inside the
- * unlock transaction could commit an unlock without its points. A one-time reconciliation would
- * compare `titles WHERE isUnlocked = 1` against transactions carrying [ACHIEVEMENT_REWARD_PREFIX]
- * and top up the difference. It is omitted on purpose: the window needed a purely local Room
- * transaction to throw, so the affected population is effectively nil, and a pass that credits
- * points is itself a double-pay risk if its matching is even slightly wrong. This is a decision,
- * not an oversight.
+ * Achievement progress, unlocking and payout. Past payout losses from a pre-transaction bug are
+ * deliberately not repaired - the affected population is effectively nil and reconciling risks double-paying.
  */
 class AchievementRepository(
     private val database: AppDatabase,
     private val titleDao: TitleDao,
     /** Fires the unlock celebration. Optional so tests can leave it out. */
     private val unlockNotifier: dev.statup.app.rpg.AchievementUnlockNotifier? = null,
-    /**
-     * Optional points-award hook. Provided lazily as a suspend lambda to avoid a circular
-     * Koin dependency (AchievementTracker → AchievementRepository → PointsRepository →
-     * AchievementTracker). When non-null, [updateProgress] awards `rewardPoints` on first
-     * unlock.
-     */
+    /** Optional points-award hook; lazy suspend lambda avoids a circular Koin dependency chain. */
     private val pointsAwarder: suspend (id: String, points: Int) -> Unit = { _, _ -> }
 ) {
     val achievements: Flow<List<Achievement>> = titleDao.getAll().map { entities ->
@@ -58,12 +43,8 @@ class AchievementRepository(
     }
 
     /**
-     * Seed missing built-in achievements, and re-point the ones the user has not unlocked yet.
-     *
-     * The re-point matters on UPDATE, not install: rows are only inserted when absent, so before
-     * this an existing player kept whatever rewardPoints shipped with the version they installed
-     * on, and a rebalance never reached them. Already-unlocked rows are deliberately left alone
-     * (see updateRewardPointsIfLocked) - no retroactive top-up, no risk of a second payout.
+     * Seeds missing built-in achievements and re-points locked ones on update (existing installs
+     * otherwise keep whatever rewardPoints shipped when they installed). Unlocked rows are untouched.
      */
     suspend fun initializeAchievements() {
         Achievements.ALL.forEach { achievement ->
@@ -91,22 +72,8 @@ class AchievementRepository(
     }
 
     /**
-     * Update progress for [achievementId]. If the new progress crosses the target the
-     * achievement is unlocked and its `rewardPoints` are awarded via [pointsAwarder].
-     *
-     * The read-then-unlock-then-award sequence runs inside `database.withTransaction` so two
-     * concurrent earns that both cross the threshold (e.g. Todoist sync + a manual action in the same
-     * instant) can't both observe `isUnlocked=false` and double-award the reward.
-     *
-     * **The award is inside the transaction.** It used to sit outside, on the reasoning that
-     * `pointsAwarder` opens its own transaction and holding ours across it wasn't worth it. But that
-     * left a window where the unlock committed and the payout didn't: the row reads as unlocked, so
-     * nothing ever retries it, and every caller wraps this in `runCatching`, so the user silently
-     * lost the points. Nested Room transactions are safe, which is exactly what makes this the cheap
-     * fix. Note that past losses are NOT repaired - see the class KDoc.
-     *
-     * The read-back and the celebration stay outside, after commit: firing the popup from inside
-     * would celebrate a payout that then rolled back.
+     * Runs unlock + award inside one transaction so concurrent earns can't double-award; the award
+     * must stay inside it, since moving it outside once left a silent lose-the-payout window.
      */
     suspend fun updateProgress(achievementId: String, progress: Int) {
         val unlockedNow: Int = database.withTransaction {
@@ -143,11 +110,7 @@ class AchievementRepository(
         return false
     }
 
-    /**
-     * Unlock [achievementId] directly (e.g. user taps "mark complete"). Awards its
-     * `rewardPoints` on first unlock, consistent with [updateProgress]; the in-transaction
-     * `isUnlocked` guard prevents a double-award if called again.
-     */
+    /** Manual unlock path (e.g. "mark complete"); same in-transaction double-award guard as [updateProgress]. */
     suspend fun unlockDirectly(achievementId: String) {
         val awardPoints: Int = database.withTransaction {
             val achievement = titleDao.getById(achievementId) ?: return@withTransaction 0
@@ -162,9 +125,8 @@ class AchievementRepository(
     }
 
     /**
-     * Create a user-defined achievement. Manual-completion only - [AchievementTracker] can only
-     * advance the hardcoded built-in ids, so a user id (`custom_…`) would never auto-progress.
-     * target = 0 marks it as no-goal, which the UI renders without a progress bar.
+     * Manual-completion only - [AchievementTracker] only advances hardcoded built-in ids, so a
+     * `custom_…` id never auto-progresses. `target = 0` marks it no-goal (UI hides the progress bar).
      */
     suspend fun createCustomAchievement(
         name: String,

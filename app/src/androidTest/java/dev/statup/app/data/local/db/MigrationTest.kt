@@ -9,15 +9,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Guards the "updates must preserve user data" guarantee.
- *
- * Creates a v1 database and runs the registered migrations all the way to the current
- * version, validating the resulting schema against the exported JSON in app/schemas at
- * each step. If a future version bump forgets to add a migration (which would otherwise
- * silently wipe user data on update), this test fails.
- *
- * Instrumented - run on a device/emulator (e.g. Waydroid):
- *     ./gradlew connectedDebugAndroidTest
+ * Guards the "updates must preserve user data" guarantee - fails if a version bump forgets
+ * a migration, which would otherwise silently wipe user data on update.
  */
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
@@ -44,12 +37,8 @@ class MigrationTest {
     }
 
     /**
-     * Data-survival guard for MIGRATION_3_4. Seeds a v3 database with two duplicate-externalId
-     * rows and one NULL-externalId manual row, migrates to the current version, and asserts the
-     * dedupe kept the MIN(id) survivor, left the manual row untouched, and created the unique
-     * index. The empty-DB test above only validates the schema - a regression in the dedupe
-     * DELETE (e.g. dropping the `externalId IS NOT NULL` guard) would pass it while silently
-     * wiping real transaction history on update; this test catches that.
+     * Data-survival guard for MIGRATION_3_4 - the empty-DB test above only validates schema; a
+     * regression in the dedupe DELETE could silently wipe real transaction history without this.
      */
     @Test
     fun migration3to4_dedupesDuplicatesAndPreservesManualRows() {

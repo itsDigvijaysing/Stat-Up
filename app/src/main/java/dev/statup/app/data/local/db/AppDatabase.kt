@@ -45,9 +45,8 @@ abstract class AppDatabase : RoomDatabase() {
         /** Current schema version - exposed for MigrationTest. Mirror of [DB_VERSION]. */
         const val CURRENT_VERSION = DB_VERSION
 
-        // v1 and v2 share the same identity hash - the bump was metadata-only.
-        // We still need a registered Migration so v1 installs can upgrade without
-        // hitting fallbackToDestructiveMigration.
+        // v1 and v2 share the same identity hash (metadata-only bump); still needs a registered
+        // Migration so v1 installs can upgrade without hitting fallbackToDestructiveMigration.
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) { /* no-op */ }
         }
@@ -58,9 +57,8 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Add a unique index on transactions.externalId so the Todoist sync dedupe
-        // check + insert is enforced at the DB level (overlapping sync runs can race).
-        // We first drop any duplicates so the index can be created.
+        // Unique index on transactions.externalId enforces sync dedupe at the DB level
+        // (overlapping sync runs can race); duplicates are dropped first so it can be created.
         private val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -89,13 +87,8 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /**
-         * Every registered migration, in order. Exposed (internal) so the instrumented
-         * MigrationTest can validate each upgrade path against the exported schemas in
-         * app/schemas - see app/src/androidTest/.../MigrationTest.kt.
-         *
-         * When bumping [version], add the new Migration here. NEVER fall back to a
-         * destructive wipe to "handle" a schema change - that silently erases user data on
-         * update, which is exactly what the migration path prevents.
+         * Every registered migration, in order; exposed (internal) for MigrationTest to validate
+         * each upgrade path against the exported schemas in app/schemas.
          */
         internal val ALL_MIGRATIONS: Array<Migration>
             get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
@@ -111,15 +104,8 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addMigrations(*ALL_MIGRATIONS)
-                    // Registered migrations preserve user data across every version bump.
-                    // We deliberately do NOT call fallbackToDestructiveMigration(): that sets
-                    // requireMigration=false, so a FORGOTTEN upgrade migration would silently
-                    // drop+recreate the tables and wipe the user's progress on update. With
-                    // the default (requireMigration=true) a missing migration throws instead,
-                    // surfacing the mistake in testing before it ships. Only a downgrade
-                    // (impossible for end users - Play enforces monotonic versionCode) is
-                    // allowed to destructively recreate, so dev-side reinstalls of older
-                    // builds don't hard-crash.
+                    // No fallbackToDestructiveMigration(): that would let a forgotten migration
+                    // silently wipe user data instead of throwing. Only downgrades (dev reinstalls) recreate.
                     .fallbackToDestructiveMigrationOnDowngrade(false)
                     .build()
                 INSTANCE = instance

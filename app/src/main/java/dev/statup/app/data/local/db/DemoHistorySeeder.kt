@@ -10,26 +10,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * Fabricates the history of a long-running player so the late-game UI can be looked at
- * without waiting months - rank badges, a filled hexagon, the S/EX gates, and how the Status
- * footer copes with three- and four-digit values.
- *
- * **Deliberately not reachable from the app.** It was briefly exposed behind a
- * `BuildConfig.DEBUG` Settings row and that was removed: a button that invents hundreds of
- * completed tasks is a footgun sitting next to real user data, and `BuildConfig.DEBUG` is one
- * wrong build variant away from shipping. The code stays because the late-game screens are
- * otherwise untestable.
- *
- * To use it, temporarily add this to `SettingsScreen` and remove it again before committing:
- * ```
- * GlassButton("Seed demo", onClick = { viewModel.seedDemoHistory(clearFirst = false) })
- * GlassButton("Clear demo", onClick = { viewModel.seedDemoHistory(clearFirst = true) })
- * ```
- * `clear` only deletes rows carrying the [MARKER] prefix, so real history is never touched.
- *
- * Writes plain EARN rows dated across the last [DAYS] days and nothing else. Stats, Work Days
- * and rank are then re-derived by the normal `StatRecomputer`, so what you see is what the
- * real engine produces from that history - not hand-set numbers that could disagree with it.
+ * Fabricates a long player history so late-game UI (S/EX gates, filled hexagon) can be inspected.
+ * Deliberately unreachable from the app - wire a temporary Settings button by hand for dev use.
  */
 object DemoHistorySeeder {
 

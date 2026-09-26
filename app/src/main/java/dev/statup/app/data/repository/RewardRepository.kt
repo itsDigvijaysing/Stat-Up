@@ -36,14 +36,8 @@ class RewardRepository(
     }
 
     /**
-     * Redeem a reward atomically:
-     *   - re-reads the live balance from SQL (ignores the ViewModel snapshot that may be stale)
-     *   - inserts the redeem transaction
-     *   - increments the reward's redeem counter
-     * All inside a single Room transaction, so double-taps and concurrent redemptions
-     * can't overspend the player's balance.
-     *
-     * Goes through [PointsRepository.redeemPoints] so the widget gets refreshed for free.
+     * Redeems atomically, re-reading the live balance from SQL (not the possibly-stale ViewModel
+     * snapshot) inside one transaction, so concurrent redemptions can't overspend the balance.
      */
     suspend fun redeemReward(reward: Reward): Result<Unit> = database.withTransaction {
         val liveBalance = pointsRepository.getCurrentBalance()
