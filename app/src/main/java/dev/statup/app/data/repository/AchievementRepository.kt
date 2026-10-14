@@ -16,6 +16,10 @@ import kotlinx.coroutines.flow.map
  */
 const val ACHIEVEMENT_REWARD_PREFIX = "Achievement reward: "
 
+/** The achievement id a payout row was written for, or null for any other transaction. */
+fun achievementIdFromReward(description: String?): String? =
+    description?.takeIf { it.startsWith(ACHIEVEMENT_REWARD_PREFIX) }?.removePrefix(ACHIEVEMENT_REWARD_PREFIX)
+
 /**
  * Achievement progress, unlocking and payout. Past payout losses from a pre-transaction bug are
  * deliberately not repaired - the affected population is effectively nil and reconciling risks double-paying.

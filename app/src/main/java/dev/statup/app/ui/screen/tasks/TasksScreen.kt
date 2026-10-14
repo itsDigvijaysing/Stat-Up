@@ -47,6 +47,7 @@ import androidx.navigation.NavController
 import dev.statup.app.data.local.db.entity.MissionEntity
 import dev.statup.app.domain.model.PlayerStats
 import dev.statup.app.domain.model.StatType
+import dev.statup.app.rpg.MissionStreak
 import dev.statup.app.sync.TodoistTask
 import dev.statup.app.ui.components.glass.*
 import dev.statup.app.ui.components.StatPickerCaption
@@ -57,6 +58,7 @@ import dev.statup.app.ui.components.HelpDialog
 import dev.statup.app.ui.components.HelpIconButton
 import dev.statup.app.ui.components.HelpPoint
 import dev.statup.app.ui.theme.*
+import java.time.LocalDate
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -529,9 +531,16 @@ private fun MissionCard(
                             fontFamily = Inter
                         )
                     }
-                    if (mission.streak > 0) {
+                    val streak = if (mission.isDaily) {
+                        MissionStreak.current(
+                            mission.streak,
+                            mission.lastCompletedAt?.let { MissionStreak.dayOf(it) },
+                            LocalDate.now()
+                        )
+                    } else 0
+                    if (streak > 0) {
                         Text(
-                            text = " • 🔥 ${mission.streak}",
+                            text = " • 🔥 $streak",
                             color = AccentWarning,
                             fontSize = 12.sp
                         )

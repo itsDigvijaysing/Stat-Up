@@ -2,6 +2,7 @@ package dev.statup.app.ui.screen.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.statup.app.data.repository.achievementIdFromReward
 import dev.statup.app.domain.model.PlayerStats
 import dev.statup.app.domain.model.Transaction
 import dev.statup.app.domain.model.TransactionType
@@ -52,7 +53,8 @@ enum class HistoryFilter(val label: String) {
     TODAY("Today"),
     WEEK("Week"),
     EARNED("Earned"),
-    SPENT("Spent")
+    SPENT("Spent"),
+    ACHIEVEMENTS("Achievements")
 }
 
 class HistoryViewModel(
@@ -280,6 +282,7 @@ class HistoryViewModel(
             HistoryFilter.WEEK -> transactions.filter { it.createdAt >= weekStart }
             HistoryFilter.EARNED -> transactions.filter { it.type == TransactionType.EARN }
             HistoryFilter.SPENT -> transactions.filter { it.type == TransactionType.REDEEM }
+            HistoryFilter.ACHIEVEMENTS -> transactions.filter { achievementIdFromReward(it.description) != null }
         }
     }
 }

@@ -248,6 +248,7 @@ class DecayEngineTest {
         override suspend fun getActiveEarnDays(): List<String> = error("unused")
         override suspend fun countByDescription(description: String): Int = error("unused")
         override suspend fun countMissionAwards(missionId: String): Int = error("unused")
+        override suspend fun getMissionAwardTimes(missionId: String): List<Long> = error("unused")
         override suspend fun deleteByDescriptionPrefix(prefix: String) = error("unused")
         override suspend fun getLifetimePointsForStat(statType: String): Int = error("unused")
         override suspend fun getUncategorisedEarns(): List<TransactionEntity> = error("unused")

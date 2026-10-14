@@ -28,8 +28,8 @@ android {
         targetSdk 36
         // versionCode 14 shipped as v3.1.6. Play requires a strictly higher code per upload,
         // so every submission bumps this even when versionName barely moves.
-        versionCode 15
-        versionName "3.2.0"
+        versionCode 16
+        versionName "3.2.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 

@@ -230,7 +230,9 @@ class TutorialCoordinatorTest {
         override fun getDailyMissions(): Flow<List<MissionEntity>> = error("unused")
         override suspend fun getById(id: Long): MissionEntity? = missions.firstOrNull { it.id == id }
         override suspend fun update(mission: MissionEntity) = error("unused")
-        override suspend fun completeIfNotDone(id: Long, completedAt: Long): Int = error("unused")
+        override suspend fun completeIfNotDone(id: Long, completedAt: Long, streak: Int): Int = error("unused")
+        override suspend fun getAllOnce(): List<MissionEntity> = error("unused")
+        override suspend fun setStreak(id: Long, streak: Int) = error("unused")
         override suspend fun resetDailyCompletions() = error("unused")
         override suspend fun deleteById(id: Long) = error("unused")
     }

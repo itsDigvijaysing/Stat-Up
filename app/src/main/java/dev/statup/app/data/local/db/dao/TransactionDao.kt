@@ -67,6 +67,9 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE source = 'MISSION' AND relatedId = :missionId")
     suspend fun countMissionAwards(missionId: String): Int
 
+    @Query("SELECT createdAt FROM transactions WHERE source = 'MISSION' AND type = 'EARN' AND relatedId = :missionId")
+    suspend fun getMissionAwardTimes(missionId: String): List<Long>
+
     @Query("SELECT SUM(points) FROM transactions WHERE type = 'EARN'")
     suspend fun getTotalEarned(): Int?
 

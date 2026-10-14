@@ -61,6 +61,9 @@ class PointsRepository(
     override suspend fun hasBeenAwarded(missionId: Long): Boolean =
         transactionDao.countMissionAwards(missionId.toString()) > 0
 
+    override suspend fun awardTimes(missionId: Long): List<Long> =
+        transactionDao.getMissionAwardTimes(missionId.toString())
+
     /** All writes run in a single Room transaction so a concurrent earn can't tear a stat
      * update apart from its accumulator/total counterpart. */
     suspend fun addPoints(

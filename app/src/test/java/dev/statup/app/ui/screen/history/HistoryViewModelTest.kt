@@ -57,4 +57,31 @@ class HistoryViewModelTest {
             Dispatchers.resetMain()
         }
     }
+
+    @Test
+    fun `achievements filter keeps only achievement payouts`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val payout = Transaction(
+                id = 1, type = TransactionType.EARN, source = TransactionSource.MANUAL, points = 60,
+                description = "${dev.statup.app.data.repository.ACHIEVEMENT_REWARD_PREFIX}streak_7"
+            )
+            val manual = Transaction(
+                id = 2, type = TransactionType.EARN, source = TransactionSource.MANUAL, points = 5,
+                description = "Read a chapter"
+            )
+            val vm = HistoryViewModel(
+                transactions = flowOf(listOf(payout, manual)),
+                playerStats = flowOf(null),
+                computeDispatcher = UnconfinedTestDispatcher(testScheduler)
+            )
+            advanceUntilIdle()
+
+            vm.setFilter(HistoryFilter.ACHIEVEMENTS)
+
+            assertEquals(listOf(1L), vm.uiState.value.filteredTransactions.map { it.id })
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
 }

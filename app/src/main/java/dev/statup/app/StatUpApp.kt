@@ -9,6 +9,7 @@ import dev.statup.app.data.local.db.dao.MissionDao
 import dev.statup.app.data.local.db.dao.RewardDao
 import dev.statup.app.data.local.db.dao.StatMappingDao
 import dev.statup.app.data.repository.AchievementRepository
+import dev.statup.app.data.repository.MissionRepository
 import dev.statup.app.data.repository.PlayerRepository
 import dev.statup.app.di.appModule
 import dev.statup.app.notifications.Notifier
@@ -68,6 +69,7 @@ class StatUpApp : Application() {
         }
 
         appScope.launch { StatMappingSeeder.seedIfEmpty(database, statMappingDao) }
+        appScope.launch { get<MissionRepository>().rebuildStreaksIfNeeded() }
         appScope.launch { userPreferences.loadSecretsIfNeeded() }
 
         // Strictly ordered in ONE coroutine: two separate coroutines previously raced to write

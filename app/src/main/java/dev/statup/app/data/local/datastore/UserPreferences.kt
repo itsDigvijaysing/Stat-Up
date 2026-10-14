@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import dev.statup.app.quotes.DailyQuoteStore
 import dev.statup.app.data.repository.MissionResetDayStore
+import dev.statup.app.data.repository.MissionStreakStore
 import dev.statup.app.rpg.DecayDayStore
 import dev.statup.app.rpg.StatUpgradeStore
 import dev.statup.app.ui.screen.tutorial.TutorialStore
@@ -26,7 +27,8 @@ class UserPreferences(private val context: Context) :
     DecayDayStore,
     StatUpgradeStore,
     TutorialStore,
-    MissionResetDayStore {
+    MissionResetDayStore,
+    MissionStreakStore {
 
     private val secretStorage = SecretStorage(context)
 
@@ -67,6 +69,7 @@ class UserPreferences(private val context: Context) :
         // double-applying decay on WorkManager retry or overlapping schedules.
         val LAST_DECAY_DAY = stringPreferencesKey("last_decay_day")
         val LAST_MISSION_RESET_DAY = stringPreferencesKey("last_mission_reset_day")
+        val MISSION_STREAK_REBUILT = booleanPreferencesKey("mission_streak_rebuilt")
         // Achievement title the user chose to display under their name on the status
         // window. Display preference only (the unlock state lives in the titles table).
         val EQUIPPED_TITLE_ID = stringPreferencesKey("equipped_title_id")
@@ -258,6 +261,13 @@ class UserPreferences(private val context: Context) :
 
     override suspend fun setLastMissionResetDay(day: String) {
         context.dataStore.edit { it[Keys.LAST_MISSION_RESET_DAY] = day }
+    }
+
+    override suspend fun isMissionStreakRebuilt(): Boolean =
+        context.dataStore.data.first()[Keys.MISSION_STREAK_REBUILT] ?: false
+
+    override suspend fun markMissionStreakRebuilt() {
+        context.dataStore.edit { it[Keys.MISSION_STREAK_REBUILT] = true }
     }
 
     suspend fun setQuoteSource(source: String) {

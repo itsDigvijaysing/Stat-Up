@@ -23,52 +23,52 @@ class HashedLinearTaskClassifierTest {
     private val fixtures = listOf(
         Fixture(
             "Rowing machine 2000 m today",
-            doubleArrayOf(0.8722008823809495, 0.00847327367287952, 0.01682721125464838, 0.004827710088642602, 0.026631769721689284, 0.07103915288119068),
+            doubleArrayOf(0.8321853591113075, 0.017550766756106187, 0.04783617339123768, 0.010899843608865962, 0.020990757855273687, 0.07053709927720912),
             StatType.STR
         ),
         Fixture(
             "Crossfit wod at the box today",
-            doubleArrayOf(0.371986065562834, 0.02032866156237692, 0.0893577274146248, 0.006238942147892144, 0.028381717767208187, 0.4837068855450639),
+            doubleArrayOf(0.3286911906528278, 0.018405805249912945, 0.09842325208273338, 0.007957894532695013, 0.02550265240864627, 0.5210192050731846),
             StatType.VIT
         ),
         Fixture(
             "Read the GIS spatial analysis guide",
-            doubleArrayOf(0.0009406889011194349, 0.9805216853565637, 0.013938710411981492, 0.0005859140358945737, 0.0007252286315224291, 0.003287772662918518),
+            doubleArrayOf(0.001411484430844971, 0.9683438249429682, 0.023260361924660564, 0.0012093591610465135, 0.0009023701526530855, 0.004872599387826878),
             StatType.INT
         ),
         Fixture(
             "Prepare for CFA level one",
-            doubleArrayOf(0.16654192977228738, 0.5056001345624178, 0.06118147832062399, 0.008992521488607257, 0.2068622976778699, 0.050821638178193754),
+            doubleArrayOf(0.11996440850187293, 0.619351774793513, 0.13876883248776273, 0.014404657606202064, 0.0778712594208971, 0.029639067189752188),
             StatType.INT
         ),
         Fixture(
             "Track the pf withdrawal request",
-            doubleArrayOf(0.026169920536023367, 0.24081300423984425, 0.4475936016306629, 0.00647939247247836, 0.015947362898526905, 0.26299671822246423),
+            doubleArrayOf(0.013084586864562552, 0.09922983532290883, 0.7875950237561973, 0.004800092919437214, 0.006711998725344264, 0.08857846241154996),
             StatType.WIS
         ),
         Fixture(
             "Question whether this goal still matters",
-            doubleArrayOf(0.04440893682045629, 0.39789008427879075, 0.36023735670866897, 0.006747110259410899, 0.17617492917930166, 0.014541582753371468),
-            StatType.INT
+            doubleArrayOf(0.06341965228499129, 0.3221038802361036, 0.4418936981467959, 0.00914790033134322, 0.1482468758706245, 0.01518799313014135),
+            StatType.WIS
         ),
         Fixture(
             "Do the screen printing squeegee practice",
-            doubleArrayOf(0.0005575870476158346, 0.00016294467839436305, 0.0013699119428070379, 0.9969019307301252, 4.885755791302568e-05, 0.0009587680431447488),
+            doubleArrayOf(0.0007459223636815584, 0.0003477735994394511, 0.001551719519897863, 0.9962274475382439, 4.737206533494686e-05, 0.0010797649134024084),
             StatType.DEX
         ),
         Fixture(
             "Complain to the customer care executive politely and get my issue solved",
-            doubleArrayOf(0.06962880243052974, 0.02239764934245961, 0.13162494952817194, 0.003734459231292757, 0.7492375314721078, 0.02337660799543805),
+            doubleArrayOf(0.04253536359212082, 0.01658747071635548, 0.052174257171632266, 0.0025692552580604553, 0.8701005435399888, 0.016033109721842236),
             StatType.CHA
         ),
         Fixture(
             "Teach kids at the NGO on sundey",
-            doubleArrayOf(0.15785905845081272, 0.042720034908158976, 0.051604875271760345, 0.020366444713806702, 0.5118795768819532, 0.21557000977350818),
+            doubleArrayOf(0.15006635460596096, 0.0643031055920363, 0.035411768951310874, 0.025377885484890915, 0.46946884794092586, 0.25537203742487496),
             StatType.CHA
         ),
         Fixture(
             "Book the ecg test appointment",
-            doubleArrayOf(0.0021655588580243553, 0.10561660351187226, 0.10469149196802205, 0.002567971358850508, 0.015447379768111042, 0.7695109945351197),
+            doubleArrayOf(0.00135611121635402, 0.14610102790310775, 0.17322371236635792, 0.002765842712108685, 0.010663683602796174, 0.6658896221992755),
             StatType.VIT
         ),
     )
@@ -92,9 +92,9 @@ class HashedLinearTaskClassifierTest {
     @Test
     fun `low confidence returns null at the shipped threshold`() {
         val gated = HashedLinearTaskClassifier({ modelFile.readBytes() })
-        // Python confidence 0.4476 - under the 0.55 bar, so the app must stay silent.
-        assertNull(gated.classify("Track the pf withdrawal request"))
-        // Python confidence 0.9805 - comfortably over it.
+        // Python confidence 0.4419 - under the 0.55 bar, so the app must stay silent.
+        assertNull(gated.classify("Question whether this goal still matters"))
+        // Python confidence 0.9683 - comfortably over it.
         assertNotNull(gated.classify("Read the GIS spatial analysis guide"))
     }
 

@@ -30,9 +30,15 @@ interface MissionDao {
      */
     @Query(
         "UPDATE missions SET isCompletedToday = 1, lastCompletedAt = :completedAt, " +
-            "streak = streak + 1 WHERE id = :id AND isCompletedToday = 0"
+            "streak = :streak WHERE id = :id AND isCompletedToday = 0"
     )
-    suspend fun completeIfNotDone(id: Long, completedAt: Long = System.currentTimeMillis()): Int
+    suspend fun completeIfNotDone(id: Long, completedAt: Long, streak: Int): Int
+
+    @Query("SELECT * FROM missions")
+    suspend fun getAllOnce(): List<MissionEntity>
+
+    @Query("UPDATE missions SET streak = :streak WHERE id = :id")
+    suspend fun setStreak(id: Long, streak: Int)
 
     /**
      * Clears daily completions. **`isDaily = 1` is load-bearing** - without it, one-off

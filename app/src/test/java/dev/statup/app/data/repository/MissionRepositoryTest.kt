@@ -11,6 +11,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 /** Covers two real double-pay bugs: a double-tap race (fixed by a conditional UPDATE, tested
  * via a fake DAO that honours it) and a one-off mission farmable via the daily midnight reset. */
@@ -84,7 +88,9 @@ class MissionRepositoryTest {
             dayStore = FakeDayStore(),
             transactor = RollbackTransactor(dao),
             awardProbe = FakeAwardProbe(emptySet()),
-            pointsAwarder = { error("payout failed") }
+            streakStore = FakeStreakStore(),
+            pointsAwarder = { error("payout failed") },
+            clock = clock
         )
 
         runCatching { repo.completeMission(1) }
@@ -95,7 +101,49 @@ class MissionRepositoryTest {
         )
     }
 
+    @Test
+    fun `completing the day after the last completion extends the streak`() = runTest {
+        val dao = FakeMissionDao(daily(id = 1).copy(streak = 3, lastCompletedAt = at(today.minusDays(1))))
+        repo(dao, mutableListOf()).completeMission(1)
+        assertEquals(4, dao.rows.getValue(1L).streak)
+    }
+
+    @Test
+    fun `completing after a missed day restarts the streak instead of adding to it`() = runTest {
+        // The reported bug: the fire kept counting across gaps because every completion did +1.
+        val dao = FakeMissionDao(daily(id = 1).copy(streak = 9, lastCompletedAt = at(today.minusDays(4))))
+        repo(dao, mutableListOf()).completeMission(1)
+        assertEquals(1, dao.rows.getValue(1L).streak)
+    }
+
+    @Test
+    fun `rebuild replaces lifetime counts with the real current run, once`() = runTest {
+        val dao = FakeMissionDao(
+            daily(id = 1).copy(streak = 20),
+            daily(id = 2).copy(streak = 7)
+        )
+        val history = mapOf(
+            1L to listOf(at(today), at(today.minusDays(1)), at(today.minusDays(3))),
+            2L to listOf(at(today.minusDays(2)), at(today.minusDays(5)))
+        )
+        val streakStore = FakeStreakStore()
+        val repo = repo(dao, mutableListOf(), history = history, streakStore = streakStore)
+
+        repo.rebuildStreaksIfNeeded()
+        assertEquals(2, dao.rows.getValue(1L).streak)
+        assertEquals("a broken run reads 0", 0, dao.rows.getValue(2L).streak)
+
+        dao.rows[1L] = dao.rows.getValue(1L).copy(streak = 5)
+        repo.rebuildStreaksIfNeeded()
+        assertEquals("gated - a second launch must not rewrite", 5, dao.rows.getValue(1L).streak)
+    }
+
     // ---- helpers ----
+
+    private val zone = ZoneId.of("Asia/Kolkata")
+    private val today = LocalDate.of(2026, 10, 15)
+    private val clock = Clock.fixed(today.atTime(12, 0).atZone(zone).toInstant(), zone)
+    private fun at(day: LocalDate): Long = day.atTime(9, 30).atZone(zone).toInstant().toEpochMilli()
 
     private fun daily(id: Long) = MissionEntity(
         id = id, name = "Daily $id", pointsReward = 4, statType = "STR",
@@ -110,24 +158,33 @@ class MissionRepositoryTest {
     private fun repo(
         dao: FakeMissionDao,
         awards: MutableList<Long>,
-        alreadyAwarded: Set<Long> = emptySet()
+        alreadyAwarded: Set<Long> = emptySet(),
+        history: Map<Long, List<Long>> = emptyMap(),
+        streakStore: FakeStreakStore = FakeStreakStore()
     ) = MissionRepository(
         missionDao = dao,
         dayStore = FakeDayStore(),
         transactor = ImmediateTransactor,
-        awardProbe = FakeAwardProbe(alreadyAwarded),
-        pointsAwarder = { awards += it.id }
+        awardProbe = FakeAwardProbe(alreadyAwarded, history),
+        streakStore = streakStore,
+        pointsAwarder = { awards += it.id },
+        clock = clock
     )
 
     /** Honours the conditional UPDATE, so an unconditional implementation fails these tests. */
     private class FakeMissionDao(vararg seed: MissionEntity) : MissionDao {
         val rows = seed.associateBy { it.id }.toMutableMap()
 
-        override suspend fun completeIfNotDone(id: Long, completedAt: Long): Int {
+        override suspend fun completeIfNotDone(id: Long, completedAt: Long, streak: Int): Int {
             val row = rows[id] ?: return 0
             if (row.isCompletedToday) return 0
-            rows[id] = row.copy(isCompletedToday = true, lastCompletedAt = completedAt)
+            rows[id] = row.copy(isCompletedToday = true, lastCompletedAt = completedAt, streak = streak)
             return 1
+        }
+
+        override suspend fun getAllOnce(): List<MissionEntity> = rows.values.toList()
+        override suspend fun setStreak(id: Long, streak: Int) {
+            rows[id] = rows.getValue(id).copy(streak = streak)
         }
 
         override suspend fun resetDailyCompletions() {
@@ -144,8 +201,18 @@ class MissionRepositoryTest {
         override suspend fun deleteById(id: Long) = error("unused")
     }
 
-    private class FakeAwardProbe(private val awarded: Set<Long>) : MissionAwardProbe {
+    private class FakeAwardProbe(
+        private val awarded: Set<Long>,
+        private val history: Map<Long, List<Long>> = emptyMap()
+    ) : MissionAwardProbe {
         override suspend fun hasBeenAwarded(missionId: Long): Boolean = missionId in awarded
+        override suspend fun awardTimes(missionId: Long): List<Long> = history[missionId].orEmpty()
+    }
+
+    private class FakeStreakStore : MissionStreakStore {
+        var rebuilt = false
+        override suspend fun isMissionStreakRebuilt(): Boolean = rebuilt
+        override suspend fun markMissionStreakRebuilt() { rebuilt = true }
     }
 
     private class FakeDayStore : MissionResetDayStore {

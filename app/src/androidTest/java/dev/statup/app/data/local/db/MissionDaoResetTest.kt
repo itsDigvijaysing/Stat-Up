@@ -41,8 +41,8 @@ class MissionDaoResetTest {
     fun resetClearsDailiesAndLeavesOneOffsAlone() = runBlocking {
         val dailyId = dao.insert(mission(name = "Workout", isDaily = true))
         val oneOffId = dao.insert(mission(name = "File taxes", isDaily = false))
-        assertEquals(1, dao.completeIfNotDone(dailyId))
-        assertEquals(1, dao.completeIfNotDone(oneOffId))
+        assertEquals(1, dao.completeIfNotDone(dailyId, System.currentTimeMillis(), 1))
+        assertEquals(1, dao.completeIfNotDone(oneOffId, System.currentTimeMillis(), 1))
 
         dao.resetDailyCompletions()
 
@@ -58,8 +58,8 @@ class MissionDaoResetTest {
     fun completeIsConditionalSoASecondAttemptChangesNothing() = runBlocking {
         val id = dao.insert(mission(name = "Workout", isDaily = true))
 
-        assertEquals("first completion lands", 1, dao.completeIfNotDone(id))
-        assertEquals("second matches no rows - this is the double-tap guard", 0, dao.completeIfNotDone(id))
+        assertEquals("first completion lands", 1, dao.completeIfNotDone(id, System.currentTimeMillis(), 1))
+        assertEquals("second matches no rows - this is the double-tap guard", 0, dao.completeIfNotDone(id, System.currentTimeMillis(), 1))
         assertEquals("streak incremented once, not twice", 1, dao.getById(id)!!.streak)
     }
 

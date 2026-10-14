@@ -135,6 +135,7 @@ val appModule = module {
             dayStore = get<UserPreferences>(),
             transactor = get(),
             awardProbe = get<PointsRepository>(),
+            streakStore = get<UserPreferences>(),
             // Lambda, not an injected PointsRepository: resolving it at call time keeps the Koin
             // graph acyclic, the same reason AchievementRepository takes its awarder this way.
             pointsAwarder = { mission ->

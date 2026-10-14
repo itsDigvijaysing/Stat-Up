@@ -1799,3 +1799,330 @@ Wash the pillow cover,VIT
 Wash the vegetables properly,VIT
 Wear cotton clothes in summer,VIT
 Wear the mask in pollution,VIT
+Read the attention paper and make notes,INT
+Gated attention paper notes,INT
+PEFT checkpoints test run,INT
+Fine tune the small llm on my data,INT
+Lora fine tuning experiment run,INT
+Check the model weights loading issue,INT
+Try rag pipeline with vector db,INT
+Build the agent with tool calling,INT
+Web agent project add memory,INT
+Implement mem0 in the agent project,INT
+Write the eval script for the model,INT
+Run the benchmark on new model,INT
+Compare two llm outputs for the paper,INT
+Distillation experiment teacher student model,INT
+Activation steering paper reading,INT
+Token budget experiment for reasoning model,INT
+Read about mixture of experts,INT
+Transformer architecture revise,INT
+Make notes on diffusion models,INT
+Research paper draft section 3,INT
+Write related work for paper,INT
+Paper submission formatting in latex,INT
+Update the experiment results table,INT
+Plot the training loss curves,INT
+Thesis chapter writing,INT
+Thesis results update on website,INT
+Prepare viva for the assignment,INT
+Assignment 3 code complete,INT
+Ai exam notes prepare,INT
+ML exam revision topics,INT
+DSA practice 2 problems,INT
+Leetcode daily problem,INT
+Leetcode medium graph question,INT
+System design revise caching,INT
+Revise oops concepts in c++,INT
+Python course next module,INT
+Learn docker basics,INT
+Kubernetes basics video course,INT
+Learn fastapi for backend,INT
+Fix the login bug in app,INT
+Fix small bugs in the project,INT
+Github issues check and fix,INT
+Review the open PR on github,INT
+Merge the PR after testing,INT
+Push code to github repo,INT
+Deploy the website on vercel,INT
+Host the project website,INT
+Website dark mode bug fix,INT
+Fix the css issue on mobile view,INT
+Publish the app build on play store,INT
+Android app release build test,INT
+App crash fix before release,INT
+Setup the vm on cloud and test,INT
+Cloud server setup with nginx,INT
+Setup cron job on my server,INT
+Linux assistant project voice feature,INT
+Desktop ai assistant project work,INT
+Chrome extension project update,INT
+Gnome extension bug fix,INT
+Api integration for the app,INT
+Write api for sharing ai model,INT
+Test the new ai coding tool,INT
+Try new claude feature and note it,INT
+Explore deepseek model for project,INT
+Check gpu usage for local model,INT
+Run local llm on laptop gpu,INT
+Write better prompts for the agent,INT
+Prompt engineering notes,INT
+Read ai research blog,INT
+Hackathon project submission,INT
+Hackathon idea prototype build,INT
+Make prototype of the ai app idea,INT
+Ai presentation maker project,INT
+Database project schema design,INT
+Write sql queries for the project,INT
+Data cleaning script for dataset,INT
+Train the classifier again,INT
+Scrape data for the dataset,INT
+Label the dataset rows,INT
+Kaggle notebook competition,INT
+Understand the paper math properly,INT
+Solve the probability questions,INT
+Linear algebra revision,INT
+Study for the company test,INT
+Online assessment prep coding,INT
+Coding test practice before exam,INT
+Revise ml interview questions,INT
+Notes for the course lecture,INT
+Watch lecture on reinforcement learning,INT
+Project readme and docs write,INT
+DSA practice,INT
+Bug fixing,INT
+Paper reading,INT
+Exam prep,INT
+Model training,INT
+Deploy website,INT
+App development,INT
+Money management this week,WIS
+Track the monthly expenses,WIS
+Note down todays expenses,WIS
+Expense split with roommate,WIS
+Settle up the trip expense amount,WIS
+Take back 1000 from friend,WIS
+Return 500 rs to friend,WIS
+Add money to wallet,WIS
+Wallet cash check,WIS
+Withdraw cash from atm,WIS
+Monthly budget 1500rs,WIS
+Budget for the trip,WIS
+Bank account kyc update,WIS
+Bank branch transfer request,WIS
+Cheque book request in bank app,WIS
+Credit card bill payment,WIS
+Credit card statement check,WIS
+Apply for new credit card,WIS
+Close the extra bank account,WIS
+Check stock portfolio,WIS
+Share market check today,WIS
+Sip amount increase,WIS
+Mutual fund statement check,WIS
+Insurance premium payment,WIS
+Life insurance policy details check,WIS
+Call insurance office for bank details,WIS
+Pay the electricity bill,WIS
+Mobile recharge plan,WIS
+Pay rent this month,WIS
+Send invoices to client,WIS
+Reimbursement form submit,WIS
+Refund status check,WIS
+Check refund came or not,WIS
+Form 16 download,WIS
+Income tax return filing,WIS
+Pan card update,WIS
+Aadhar update online,WIS
+Degree certificate collect,WIS
+Convocation form fill,WIS
+College fees payment,WIS
+Exam form fill,WIS
+Submit the documents online,WIS
+Upload documents on portal,WIS
+Offer letter download and save,WIS
+Joining documents ready,WIS
+Job portal profile update,WIS
+Apply for job roles today,WIS
+Apply job on company site,WIS
+Apply to 5 jobs today,WIS
+Check new job openings,WIS
+Visa sponsorship roles check,WIS
+Remote job listings check,WIS
+Check linkedin jobs posted today,WIS
+Update resume for applications,WIS
+Prepare resume for job apply,WIS
+Fill company application form,WIS
+Government job form fill,WIS
+Flight booking for hometown,WIS
+Bus ticket booking,WIS
+Train ticket booking tatkal,WIS
+Book uber early for airport,WIS
+Travel booking for next week,WIS
+Hotel booking for trip,WIS
+Renew the subscription,WIS
+Cancel the subscription before renewal,WIS
+Stop auto pay on account,WIS
+Subscription expiring check,WIS
+Free trial ending cancel,WIS
+Cloud credits check,WIS
+Check aws bill,WIS
+Check the plan limit and usage,WIS
+Change password of accounts,WIS
+Remove access from old accounts,WIS
+Disable extra accounts,WIS
+Two factor setup on accounts,WIS
+Backup phone photos to drive,WIS
+Transfer photos to laptop,WIS
+Delete old screenshots,WIS
+Go through screenshots and sort,WIS
+Save whatsapp numbers to contacts,WIS
+Convert numbers to contacts,WIS
+Download the app and set up,WIS
+Phone storage cleanup,WIS
+Laptop health check hinges,WIS
+Laptop battery issue check,WIS
+Buy screen guard for laptop,WIS
+Buy an umbrella,WIS
+Shopping list for the month,WIS
+Amazon sale check for things,WIS
+Order things from amazon,WIS
+Sell old cycle online,WIS
+Return the amazon order,WIS
+Record important details in notes,WIS
+Save college material before email expires,WIS
+Take backup of college email data,WIS
+Plan the week schedule,WIS
+Set daily routine,WIS
+Weekly review of tasks,WIS
+Set clear goals for next year,WIS
+Plan one skill to learn this year,WIS
+Journal about the day,WIS
+Reflect on what went wrong,WIS
+Think about the career decision,WIS
+Decide between two offers calmly,WIS
+Write down life lessons,WIS
+Courage to accept mistakes,WIS
+Stop overthinking small decisions,WIS
+Body mind wallet review,WIS
+Read the self help book,WIS
+Read 20 pages of the book,WIS
+Money management,WIS
+Flight booking,WIS
+Bank work,WIS
+Bill payment,WIS
+Form filling,WIS
+Expense tracking,WIS
+Send resume to professor sir,CHA
+Send resume to hr,CHA
+Send resume to recruiter on mail,CHA
+Email follow up with company,CHA
+Follow up email for the offer,CHA
+Reply to all pending mails,CHA
+Reply to sir mail respectfully,CHA
+Mail to placement office,CHA
+Mail the hr about joining date,CHA
+Decline the offer politely by mail,CHA
+Inform them about joining another company,CHA
+Send role link to friend for referral,CHA
+Share job opening with friend,CHA
+Ask friend for referral at amazon,CHA
+Contact the business guy for project,CHA
+Networking with abroad company people,CHA
+Connect with people on linkedin,CHA
+Linkedin post about project,CHA
+Slack call with team,CHA
+Team call for project update,CHA
+Call friends for dinner,CHA
+Dinner with friends tonight,CHA
+Birthday party at friends place,CHA
+Meetup with college friends,CHA
+Confirm family plans for function,CHA
+Talk with family about convocation,CHA
+Ask sir for research approval,CHA
+Meet sir in lab,CHA
+Go to lab to meet professor,CHA
+Interview at 3pm,CHA
+Mock interview with senior,CHA
+Interview prep call with friend,CHA
+Tell interns about their mistakes,CHA
+Give feedback to intern,CHA
+Ask hr about the exam date,CHA
+Confirm with sister about plan,CHA
+Check whatsapp messages and reply,CHA
+Reply to whatsapp group,CHA
+Message friend about job,CHA
+Ask for early test slot by mail,CHA
+Thank you mail after interview,CHA
+Wish friend on birthday,CHA
+Call friend after long time,CHA
+Video call with family,CHA
+Coffee with old colleague,CHA
+Introduce myself to new team,CHA
+Share pictures with friends group,CHA
+Get contacts from friend,CHA
+Help friend with resume,CHA
+Discuss startup idea with friend,CHA
+Talk to client about project,CHA
+Client meeting at 11,CHA
+Present the project to sir,CHA
+Group discussion with team,CHA
+Send invite for the meetup,CHA
+Ask senior about company culture,CHA
+Follow up with recruiter,CHA
+Mail very important to hr,CHA
+Send resume,CHA
+Email follow up,CHA
+Friends call,CHA
+Family call,CHA
+Create videos of project,DEX
+Edit youtube video,DEX
+Make new youtube video,DEX
+Record youtube video for channel,DEX
+Video editing practice,DEX
+Make thumbnail for video,DEX
+Shoot short reel for channel,DEX
+Anime video edit for channel,DEX
+Design poster in figma,DEX
+Figma ui design practice,DEX
+App icon design,DEX
+Logo design rough sketches,DEX
+Photo editing practice in lightroom,DEX
+Product photography practice,DEX
+Make demo video of app,DEX
+Screen record app demo and edit,DEX
+Draw sketch daily,DEX
+Practice typing speed,DEX
+Guitar practice 20 min,DEX
+Animate the logo,DEX
+Color grading practice video,DEX
+Calligraphy practice,DEX
+Edit podcast audio,DEX
+Video editing,DEX
+Walking 30 min,STR
+Evening walk 5000 steps,STR
+Go for run 2km,STR
+Morning run,STR
+Workout session,STR
+Gym session,STR
+Push ups 50,STR
+Pull ups practice,STR
+Cycling 10 km,STR
+Football match evening,STR
+Badminton with friends,STR
+Skipping rope 500,STR
+Stairs climbing 10 floors,STR
+Home workout 20 min,STR
+Blood test checkup,VIT
+Full body checkup,VIT
+Doctor appointment,VIT
+Eye checkup,VIT
+Dentist visit,VIT
+Sleep before 12,VIT
+Drink 3 liter water,VIT
+Take vitamins,VIT
+Eat fruits today,VIT
+No junk food today,VIT
+Note down body weight,VIT
+Take medicine on time,VIT
+Rest day no screen,VIT
+Nap 20 min,VIT

@@ -25,9 +25,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import dev.statup.app.data.repository.achievementIdFromReward
+import dev.statup.app.domain.model.Achievements
 import dev.statup.app.domain.model.Transaction
 import dev.statup.app.domain.model.TransactionSource
 import dev.statup.app.domain.model.TransactionType
@@ -437,15 +440,28 @@ private fun TransactionCard(transaction: Transaction) {
     val pointsColor = if (isEarn) AccentSuccess else AccentError
     val pointsPrefix = if (isEarn) "+" else "-"
 
-    val emoji = when (transaction.source) {
-        TransactionSource.TODOIST -> "✅"
-        TransactionSource.MANUAL -> "✏️"
-        TransactionSource.MISSION -> "🎯"
-        TransactionSource.MOOD -> "😊"
-        TransactionSource.REWARD -> "🎁"
+    // Payout rows are stored as "Achievement reward: <id>" (the double-pay guard matches on that
+    // text), so the readable name is resolved here at display time.
+    val achievementId = achievementIdFromReward(transaction.description)
+    val achievement = achievementId?.let { Achievements.getById(it) }
+
+    val emoji = when {
+        achievementId != null -> achievement?.emoji ?: "🏆"
+        else -> when (transaction.source) {
+            TransactionSource.TODOIST -> "✅"
+            TransactionSource.MANUAL -> "✏️"
+            TransactionSource.MISSION -> "🎯"
+            TransactionSource.MOOD -> "😊"
+            TransactionSource.REWARD -> "🎁"
+        }
+    }
+    val title = when {
+        achievementId != null -> achievement?.name ?: "Achievement unlocked"
+        else -> transaction.description ?: transaction.source.name.lowercase()
+            .replaceFirstChar { it.uppercase() }
     }
 
-    val statColor = transaction.statType?.let { stat ->
+    val statColor = if (achievementId != null) PointsGold else transaction.statType?.let { stat ->
         when (stat) {
             StatType.STR -> StatStrength
             StatType.INT -> StatIntelligence
@@ -487,13 +503,13 @@ private fun TransactionCard(transaction: Transaction) {
             // Details
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = transaction.description ?: transaction.source.name.lowercase()
-                        .replaceFirstChar { it.uppercase() },
+                    text = title,
                     color = TextPrimary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
                     fontFamily = Inter,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -502,6 +518,14 @@ private fun TransactionCard(transaction: Transaction) {
                         fontSize = 12.sp,
                         fontFamily = Inter
                     )
+                    if (achievementId != null) {
+                        Text(
+                            text = " • Achievement",
+                            color = PointsGold,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                     transaction.statType?.let { stat ->
                         Text(
                             text = " • ${stat.name}",

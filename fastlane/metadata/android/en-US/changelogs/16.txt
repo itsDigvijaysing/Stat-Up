@@ -1,0 +1,5 @@
+Streaks that mean what they say, and a clearer history.
+
+• A mission's 🔥 now counts days in a row. Skip a day and it starts again instead of quietly adding up. Existing counts are corrected when you open the app
+• Achievement rewards in History now show the achievement's name and badge, and there's a new Achievements filter
+• Smarter stat suggestions for new tasks: better with study and tech work, money and bookings, job hunting, and messages to people
